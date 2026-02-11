@@ -143,33 +143,74 @@ export default function Footer() {
               <h4 className="text-gray-500 uppercase tracking-widest text-xs font-bold mb-2">
                 Follow Us
               </h4>
-              <div className="flex flex-col space-y-4">
+              <div className="flex flex-row gap-4">
                 <Link
-                  href="#"
-                  className="text-gray-300 hover:text-[#BA170D] transition-colors text-sm flex items-center gap-2 group"
+                  href="https://www.instagram.com/jhalakccet?igsh=eHE0OGxwMnl0aDI4"
+                  target="_blank"
+                  className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-gray-300 hover:text-[#BA170D] hover:border-[#BA170D] transition-all duration-300 hover:scale-110"
+                  title="Instagram"
                 >
-                  Instagram
-                  <span className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                    ↗
-                  </span>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect
+                      x="2"
+                      y="2"
+                      width="20"
+                      height="20"
+                      rx="5"
+                      ry="5"
+                    ></rect>
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                  </svg>
                 </Link>
                 <Link
                   href="#"
-                  className="text-gray-300 hover:text-[#BA170D] transition-colors text-sm flex items-center gap-2 group"
+                  className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-gray-300 hover:text-[#BA170D] hover:border-[#BA170D] transition-all duration-300 hover:scale-110"
+                  title="YouTube"
                 >
-                  YouTube
-                  <span className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                    ↗
-                  </span>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path>
+                    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon>
+                  </svg>
                 </Link>
                 <Link
-                  href="#"
-                  className="text-gray-300 hover:text-[#BA170D] transition-colors text-sm flex items-center gap-2 group"
+                  href="https://www.carmelcet.in"
+                  target="_blank"
+                  className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-gray-300 hover:text-[#BA170D] hover:border-[#BA170D] transition-all duration-300 hover:scale-110"
+                  title="College Website"
                 >
-                  Twitter
-                  <span className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                    ↗
-                  </span>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="2" y1="12" x2="22" y2="12"></line>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                  </svg>
                 </Link>
               </div>
             </div>
@@ -181,17 +222,47 @@ export default function Footer() {
               </h4>
               <div className="flex flex-col space-y-4">
                 <a
-                  href="mailto:contact@jhalak.com"
-                  className="text-gray-300 hover:text-[#BA170D] transition-colors text-sm"
+                  href="mailto:jhalak@carmelcet.in"
+                  className="text-gray-300 hover:text-[#BA170D] transition-colors text-sm flex items-center gap-2"
                 >
-                  contact@jhalak.com
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                  </svg>
+                  jhalak@carmelcet.in
                 </a>
-                <a
-                  href="tel:+919876543210"
-                  className="text-gray-300 hover:text-[#BA170D] transition-colors text-sm"
-                >
-                  +91 98765 43210
-                </a>
+                <div className="text-gray-300 text-sm flex flex-col gap-1">
+                  <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">
+                    Steeve
+                  </span>
+                  <a
+                    href="tel:+916235834190"
+                    className="hover:text-[#BA170D] transition-colors flex items-center gap-2"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.12 2h3a2 2 0 0 1 2 1.72 12.05 12.05 0 0 0 .75 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.03 12.03 0 0 0 2.81.74A2 2 0 0 1 22 16.92z"></path>
+                    </svg>
+                    +91 62358 34190
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -212,7 +283,7 @@ export default function Footer() {
 
         {/* Bottom Bar */}
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-6 text-xs md:text-sm text-gray-500 uppercase tracking-widest font-mono">
-          <span className="order-2 md:order-1">© 2026 Carmel College</span>
+          <span className="order-2 md:order-1">© 2026 Jhalak CCET</span>
 
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}

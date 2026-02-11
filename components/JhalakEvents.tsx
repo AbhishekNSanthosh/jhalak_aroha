@@ -99,9 +99,14 @@ export default function JhalakEvents() {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <span className="w-6 h-[1px] bg-[#BA170D]"></span>
-              <h2 className="text-[#BA170D] font-cinzel font-bold text-lg uppercase tracking-widest">
-                Internal Events
-              </h2>
+              <div className="flex items-center gap-6">
+                <h2 className="text-[#BA170D] font-cinzel font-bold text-lg uppercase tracking-widest">
+                  Internal
+                </h2>
+                <h2 className="text-[#BA170D] font-cinzel font-bold text-lg uppercase tracking-widest">
+                  Events
+                </h2>
+              </div>
             </div>
 
             <p className="text-5xl md:text-7xl font-light tracking-tighter text-white/90">
