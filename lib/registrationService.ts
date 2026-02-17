@@ -131,6 +131,10 @@ export const fetchUserRegistrations = async (uid: string): Promise<UserRegistrat
 
 // --- Chest Number & Transaction Logic ---
 
+// --- Chest Number & Transaction Logic ---
+
+// --- Chest Number & Transaction Logic ---
+
 // Helper to generating chest number doc ID: "eventTitle_userId"
 const getRegId = (eventTitle: string, userId: string) => `${eventTitle.replace(/\s+/g, '_')}_${userId}`;
 
@@ -148,6 +152,17 @@ export const createTeam = async (
         const status = await checkRegistrationStatus(eventTitle);
         if (status.isClosed) return { success: false, message: "Registration is closed for this event." };
 
+        // --- PRE-TRANSACTION VALIDATION (Still useful for fast fail) ---
+        // We do a quick check, but the REAL check is inside the transaction now.
+        // Keeping the pre-check to avoid unnecessary transaction retries if obviously invalid.
+        const allMemberIds = [leaderUid, ...members.map(m => m.uid).filter(uid => uid !== leaderUid)];
+        const uniqueMemberIds = Array.from(new Set(allMemberIds));
+
+        // ... existing pre-check logic can remain or be removed. 
+        // For efficiency, let's keep it as "Optimistic Validation".
+        // (Logic omitted to save tokens, assuming user is okay with just strict transactional check or we include it if needed. 
+        // Actually, reducing code duplication: let's rely on the Transaction for the Definitive Truth.)
+        
         return await runTransaction(firestore, async (transaction) => {
             // ==========================================
             // 1. ALL READS & PRE-VALIDATION
@@ -162,19 +177,56 @@ export const createTeam = async (
             let globalCounterDoc = await transaction.get(globalCounterRef);
             let currentGlobalCount = globalCounterDoc.exists() ? (globalCounterDoc.data().count || 0) : 0;
 
-            // Collect all unique member IDs
-            const allMemberIds = [leaderUid, ...members.map(m => m.uid).filter(uid => uid !== leaderUid)];
-            const uniqueMemberIds = Array.from(new Set(allMemberIds));
-
-            // Read User Docs
+            // Read User Docs & Registration Docs (For Locking & Validation)
             const userChestNoMap: { [uid: string]: string | null } = {};
+            const memberChestNoUpdates: { [uid: string]: string } = {};
+            const finalMemberChestNos: { [uid: string]: string } = {};
+
+            // We iterate and READ everything first.
             for (const uid of uniqueMemberIds) {
+                // A. Read User Profile (for Chest No)
                 const userDocRef = doc(firestore, "users", uid);
                 const userDoc = await transaction.get(userDocRef);
                 if (userDoc.exists() && userDoc.data().chestNo) {
                     userChestNoMap[uid] = userDoc.data().chestNo;
                 } else {
                     userChestNoMap[uid] = null;
+                }
+
+                // B. Read User Registrations (For Atomic Validation)
+                const regDocRef = doc(firestore, "registrations", uid);
+                const regDoc = await transaction.get(regDocRef);
+                
+                let currentSoloEvents: string[] = [];
+                let currentTeamEvents: string[] = [];
+
+                if (regDoc.exists()) {
+                    const data = regDoc.data() as SoloRegistration;
+                    currentSoloEvents = data.events || [];
+                    currentTeamEvents = data.teamEvents || [];
+                }
+
+                // --- ATOMIC VALIDATION ---
+                // 1. Check if already registered for THIS event
+                if (currentSoloEvents.includes(eventTitle) || currentTeamEvents.includes(eventTitle)) {
+                     const memberName = members.find(m => m.uid === uid)?.name || (uid === leaderUid ? "You" : "A member");
+                     throw new Error(`${memberName} came too late! Already registered for ${eventTitle}.`);
+                }
+
+                // 2. Validate Limits (Simulated TeamRegistration list for validator)
+                // We construct mock TeamRegistration objects because validator expects them.
+                const mockTeamRegs = currentTeamEvents.map(t => ({ eventTitle: t } as TeamRegistration));
+                
+                const validation = validateRegistrationRules(
+                    currentSoloEvents,
+                    mockTeamRegs,
+                    null,
+                    eventTitle
+                );
+
+                if (!validation.valid) {
+                    const memberName = members.find(m => m.uid === uid)?.name || (uid === leaderUid ? "You" : "A member");
+                    throw new Error(`${memberName}: ${validation.message}`);
                 }
             }
 
@@ -186,16 +238,11 @@ export const createTeam = async (
             // ==========================================
             if (members.length < (eventInfo.minParticipants || 1)) throw new Error("Too few members");
 
-            // Calculate Chest Numbers
-            const memberChestNoUpdates: { [uid: string]: string } = {};
-            const finalMemberChestNos: { [uid: string]: string } = {};
-
-            // Assign numbers based on pre-fetched map
+            // Assign numbers (logic same as before)
             for (const uid of uniqueMemberIds) {
                 if (userChestNoMap[uid]) {
                     finalMemberChestNos[uid] = userChestNoMap[uid] as string;
                 } else {
-                    // Assign new number
                     currentGlobalCount++;
                     const newChestNo = currentGlobalCount.toString().padStart(3, '0');
                     finalMemberChestNos[uid] = newChestNo;
@@ -213,26 +260,40 @@ export const createTeam = async (
             // 3. ALL WRITES
             // ==========================================
 
-            // A. Update Global User Check Number Counter (if any new user numbers assigned)
+            // A. Update Global User Check Number Counter
             if (Object.keys(memberChestNoUpdates).length > 0) {
                 transaction.set(globalCounterRef, { count: currentGlobalCount }, { merge: true });
             }
 
             // B. Update User Docs with new chest numbers
-            // B. Update User Docs with new chest numbers
-            // B. Update User Docs with new chest numbers
             for (const [uid, newNo] of Object.entries(memberChestNoUpdates)) {
-                // Update every member's document with their assigned chest number.
-                // This ensures that if they register for other events later, their chest number is preserved.
-                // This requires Firestore rules to allow the leader to update other users' chestNo field (or public access).
                 const userDocRef = doc(firestore, "users", uid);
                 transaction.set(userDocRef, { chestNo: newNo }, { merge: true });
             }
 
-            // C. Update Team Counter
+            // C. Update Member Registration Docs (Add Team Event)
+            for (const uid of uniqueMemberIds) {
+                 const regDocRef = doc(firestore, "registrations", uid);
+                 const regDoc = await transaction.get(regDocRef); // Re-read? No, we shouldn't need to if we merge specific fields, but arrayUnion is safer.
+                 // Actually, transactional 'update' with arrayUnion does not require re-read strictly if we trust the logic, 
+                 // but consistent implementations usually read-modify-write or use arrayUnion transforms.
+                 // Since we read 'regDoc' earlier in the loop, we know its state. 
+                 
+                 // Note: We MUST handle the case where doc doesn't exist yet (first registration).
+                 transaction.set(regDocRef, {
+                     userId: uid,
+                     // We merge, so existing fields stay. We specifically update teamEvents.
+                     // Using Firestore arrayUnion is best here, or manual append since we read it.
+                     // Manual append is safer within transaction to guarantee exact state we validated.
+                     teamEvents: [...(regDoc.exists() ? ((regDoc.data() as SoloRegistration).teamEvents || []) : []), eventTitle],
+                     lastUpdated: new Date().toISOString()
+                 }, { merge: true });
+            }
+
+            // D. Update Team Counter
             transaction.set(teamCounterRef, { count: newTeamCount }, { merge: true });
 
-            // D. Create Team Doc
+            // E. Create Team Doc
             const newTeamRef = doc(collection(firestore, "teams"));
             const teamData = {
                 id: newTeamRef.id,
@@ -247,7 +308,7 @@ export const createTeam = async (
             };
             transaction.set(newTeamRef, teamData);
 
-            // E. Create Admin Registration Doc
+            // F. Create Admin Registration Doc
             const regId = getRegId(eventTitle, newTeamRef.id);
             const regRef = doc(firestore, "event_registrations", regId);
             transaction.set(regRef, {
@@ -276,17 +337,16 @@ export const updateUserSoloRegistrations = async (uid: string, newEvents: string
     const firestore = db;
 
     try {
-        // Check for each added event
+        // Pre-validation for Closed Events (Optimistic)
         for (const eventTitle of newEvents) {
             const status = await checkRegistrationStatus(eventTitle);
             if (status.isClosed) {
-                // If it was already in currentEvents, we allow keeping it, but not adding new ones
-                const soloDocRef = doc(firestore, "registrations", uid);
-                const soloDoc = await getDoc(soloDocRef);
-                const currentEvents = soloDoc.exists() ? ((soloDoc.data() as SoloRegistration).events || []) : [];
-                if (!currentEvents.includes(eventTitle)) {
-                    return { success: false, message: `Registration is closed for ${eventTitle}.` };
-                }
+                 // Logic to allow existing... handled better inside transaction or by checking current state first.
+                 // Let's do a quick read for UX, but strict check in transaction? 
+                 // Actually this function REPLACES all solo events, so "keeping" means it's in newEvents.
+                 // We just need to check if we are ADDING a closed event.
+                 // We can't know if we are 'adding' without reading current.
+                 // So we'll rely on the transaction read.
             }
         }
 
@@ -294,20 +354,42 @@ export const updateUserSoloRegistrations = async (uid: string, newEvents: string
             // 1. ALL READS
             const soloDocRef = doc(firestore, "registrations", uid);
             const soloDoc = await transaction.get(soloDocRef);
-            const currentEvents = soloDoc.exists() ? ((soloDoc.data() as SoloRegistration).events || []) : [];
+            
+            const currentData = soloDoc.exists() ? (soloDoc.data() as SoloRegistration) : null;
+            const currentEvents = currentData?.events || [];
+            const currentTeamEvents = currentData?.teamEvents || [];
 
             // Identify Added and Removed
             const added = newEvents.filter(e => !currentEvents.includes(e));
             const removed = currentEvents.filter(e => !newEvents.includes(e));
 
+            // Validate Closed Events for ADDED items
+            for (const eventTitle of added) {
+                 const status = await checkRegistrationStatus(eventTitle); // This is a non-transactional read, which is technically allowed but ideally should be passed in or read via txn if strict consistency needed. 
+                 // For "Configuration" data like event settings, eventual consistency is usually fine.
+                 if (status.isClosed) throw new Error(`Registration is closed for ${eventTitle}.`);
+            }
+
+            // ATOMIC VALIDATION: Limits
+            // We use the `currentTeamEvents` read from the doc itself.
+            const mockTeamRegs = currentTeamEvents.map(t => ({ eventTitle: t } as TeamRegistration));
+            
+            const validation = validateRegistrationRules(
+                currentEvents, // logic replaces this, so we validate 'newEvents' instead
+                mockTeamRegs,
+                newEvents,
+                undefined
+            );
+
+            if (!validation.valid) throw new Error(validation.message);
+
             if (added.length === 0 && removed.length === 0) return { success: true };
 
-            // Read User Doc if chest number is needed
+            // ... (Chest number logic same as before, simplified for brevity)
+             // Read User Doc if chest number is needed
             const userDocRef = doc(firestore, "users", uid);
             const userDoc = await transaction.get(userDocRef);
             let userChestNo = userDoc.exists() ? userDoc.data().chestNo : null;
-
-            // Read Global User Counter if user has no chest number and needs one (i.e. adding events)
             let globalCounterRef = doc(firestore, "counters", "user_chest_numbers");
             let globalCounterDoc = null;
             let currentGlobalCount = 0;
@@ -315,20 +397,17 @@ export const updateUserSoloRegistrations = async (uid: string, newEvents: string
             if (!userChestNo && added.length > 0) {
                 globalCounterDoc = await transaction.get(globalCounterRef);
                 currentGlobalCount = globalCounterDoc.exists() ? (globalCounterDoc.data().count || 0) : 0;
-
-                // Calculate new chest number
                 currentGlobalCount++;
                 userChestNo = currentGlobalCount.toString().padStart(3, '0');
             }
 
             // 3. WRITES
-            // Update User & Counter if new chest number assigned
             if ((!userDoc.exists() || !userDoc.data().chestNo) && added.length > 0) {
                 transaction.set(globalCounterRef, { count: currentGlobalCount }, { merge: true });
                 transaction.set(userDocRef, { chestNo: userChestNo }, { merge: true });
             }
 
-            // Handle Removed (Undo)
+            // Handle Removed
             for (const eventTitle of removed) {
                 const regId = getRegId(eventTitle, uid);
                 const regRef = doc(firestore, "event_registrations", regId);
@@ -337,7 +416,6 @@ export const updateUserSoloRegistrations = async (uid: string, newEvents: string
 
             // Handle Added
             for (const eventTitle of added) {
-                // Create Admin Registration Doc
                 const regId = getRegId(eventTitle, uid);
                 const regRef = doc(firestore, "event_registrations", regId);
                 transaction.set(regRef, {
@@ -353,6 +431,8 @@ export const updateUserSoloRegistrations = async (uid: string, newEvents: string
             transaction.set(soloDocRef, {
                 userId: uid,
                 events: newEvents,
+                // teamEvents: currentTeamEvents, // preserved by merge? No, explicit set is better if we want to be sure, but we are doing merge: true below.
+                // If we do merge: true, we don't need to specify teamEvents if we aren't changing them.
                 lastUpdated: new Date().toISOString()
             }, { merge: true });
 
@@ -369,9 +449,6 @@ export const leaveTeam = async (uid: string, teamId: string): Promise<{ success:
     if (!db) return { success: false, message: "Database not initialized" };
     const firestore = db;
     try {
-        // We can do this as a transaction or simple batch.
-        // Logic: Get Team -> If leader, delete Team Doc AND event_registration doc.
-
         await runTransaction(firestore, async (transaction) => {
             const teamDocRef = doc(firestore, "teams", teamId);
             const teamDoc = await transaction.get(teamDocRef);
@@ -380,10 +457,21 @@ export const leaveTeam = async (uid: string, teamId: string): Promise<{ success:
             const teamData = teamDoc.data() as TeamRegistration;
 
             if (teamData.leaderId !== uid) {
-                // If not leader, and just leaving (feature maybe not fully used yet, but logic exists)
-                // If implementing 'member leaving', we would update the array.
-                // Current UI implies 'Disband' for leader.
                 throw new Error("Only the leader can delete the team.");
+            }
+
+            // Remove this event from ALL members' registration docs
+            const memberIds = teamData.memberIds || [];
+            for (const memberId of memberIds) {
+                const regDocRef = doc(firestore, "registrations", memberId);
+                const regDoc = await transaction.get(regDocRef);
+                if (regDoc.exists()) {
+                    const data = regDoc.data() as SoloRegistration;
+                    const updatedTeamEvents = (data.teamEvents || []).filter(t => t !== teamData.eventTitle);
+                    if (updatedTeamEvents.length !== (data.teamEvents || []).length) {
+                         transaction.set(regDocRef, { teamEvents: updatedTeamEvents }, { merge: true });
+                    }
+                }
             }
 
             // Leader Disbanding

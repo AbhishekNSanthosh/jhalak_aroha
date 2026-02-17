@@ -64,6 +64,7 @@ export interface TeamRegistration {
 export interface SoloRegistration {
     userId: string; // User UID
     events: string[]; // Array of Event Titles user has registered for individually
+    teamEvents?: string[]; // Array of Event Titles user has registered for as part of a team (for transactional counts)
     lastUpdated: string;
 }
 
