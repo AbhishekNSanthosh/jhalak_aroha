@@ -238,8 +238,8 @@ export const createTeam = async (
                 }
 
                 const userData = userDoc.data();
-                if (!userData.name || !userData.department || !userData.collegeId) {
-                    throw new Error(`Profile incomplete for member ${userData.name || uid}. Please ask them to complete their profile.`);
+                if (!userData.name || !userData.department || !userData.collegeId || !userData.mobile) {
+                    throw new Error(`Profile incomplete for member ${userData.name || uid}. Please ask them to complete their profile (including mobile number).`);
                 }
 
                 if (userData.chestNo) {
@@ -465,8 +465,8 @@ export const updateUserSoloRegistrations = async (uid: string, newEvents: string
             }
 
             const userData = userDoc.data();
-            if (!userData.name || !userData.department || !userData.collegeId) {
-                throw new Error("Profile incomplete. Please fill all required details in Profile.");
+            if (!userData.name || !userData.department || !userData.collegeId || !userData.mobile) {
+                throw new Error("Profile incomplete. Please fill all required details in Profile (including mobile number).");
             }
 
             let userChestNo = userData.chestNo || null;

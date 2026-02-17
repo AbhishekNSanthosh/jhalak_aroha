@@ -71,7 +71,9 @@ export default function RegisterPage() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [saving, setSaving] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [eventSettings, setEventSettings] = useState<Record<string, boolean>>({});
+  const [eventSettings, setEventSettings] = useState<Record<string, boolean>>(
+    {},
+  );
 
   // Initial Auth & Data Fetch
   useEffect(() => {
@@ -116,6 +118,23 @@ export default function RegisterPage() {
   const hasChanges =
     JSON.stringify(pendingSoloEvents.sort()) !==
     JSON.stringify(registrations.soloEvents.sort());
+
+  const isProfileComplete =
+    userProfile &&
+    userProfile.name &&
+    userProfile.department &&
+    userProfile.collegeId &&
+    userProfile.mobile;
+
+  // Redirect if profile incomplete
+  useEffect(() => {
+    if (!loading && user && !isProfileComplete) {
+      toast.error(
+        "Please complete your profile before registering for events.",
+      );
+      router.push("/profile");
+    }
+  }, [loading, user, isProfileComplete, router]);
 
   const handleToggleSolo = (event: EventItem) => {
     const isSelected = pendingSoloEvents.includes(event.title);
@@ -221,7 +240,6 @@ export default function RegisterPage() {
         <ConfirmToast
           t={t}
           message="Are you sure you want to leave/disband this team?"
-
           onConfirm={async () => {
             // Optimistic UI Update: Remove team immediately from view
             setRegistrations((prev) => ({
@@ -244,8 +262,6 @@ export default function RegisterPage() {
       { duration: Infinity },
     );
   };
-
-
 
   return (
     <main className="min-h-screen bg-[#0A0A0A] text-white font-outfit relative overflow-y-auto selection:bg-[#BA170D] selection:text-white">
@@ -361,7 +377,8 @@ export default function RegisterPage() {
                               handleCreateTeam(event, members)
                             }
                             onLeaveTeam={async () => {
-                              if (teamReg?.id) await handleLeaveTeam(teamReg.id);
+                              if (teamReg?.id)
+                                await handleLeaveTeam(teamReg.id);
                             }}
                             currentUser={userProfile || user}
                           />
