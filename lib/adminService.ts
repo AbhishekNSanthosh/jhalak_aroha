@@ -5,6 +5,7 @@ import { UserProfile } from "@/data/constant";
 
 export interface AdminUserView extends UserProfile {
     registrationCount: number;
+    chestNo?: string; // User's personal chest number
     chestNumbers: string[]; // List of chest numbers (if any)
     events: string[]; // List of registered event titles
 }

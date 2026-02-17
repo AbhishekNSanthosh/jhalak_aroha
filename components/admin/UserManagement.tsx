@@ -216,6 +216,7 @@ export default function UserManagement() {
             <tr>
               <th className="p-4">User</th>
               <th className="p-4">ID</th>
+              <th className="p-4">Chest No</th>
               <th className="p-4">Details</th>
               <th className="p-4">Contact</th>
               <th className="p-4 text-center">Events</th>
@@ -252,6 +253,11 @@ export default function UserManagement() {
                 </td>
                 <td className="p-4 font-mono text-xs text-[#BA170D] font-bold">
                   {user.collegeId || "-"}
+                </td>
+                <td className="p-4">
+                  <span className="bg-[#BA170D]/20 text-[#BA170D] px-3 py-1 rounded-full text-xs font-bold font-mono border border-[#BA170D]/30">
+                    {user.chestNo || "-"}
+                  </span>
                 </td>
                 <td className="p-4">
                   <div className="flex flex-col gap-1 text-xs text-gray-400">
