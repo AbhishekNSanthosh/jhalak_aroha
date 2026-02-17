@@ -241,14 +241,26 @@ export const createTeam = async (
             if (members.length < (eventInfo.minParticipants || 1)) throw new Error("Too few members");
 
             // Assign numbers starting from 101
+            // Assign numbers starting from 101
             for (const uid of uniqueMemberIds) {
                 if (userChestNoMap[uid]) {
                     finalMemberChestNos[uid] = userChestNoMap[uid] as string;
                 } else {
-                    currentGlobalCount++;
-                    const newChestNo = (100 + currentGlobalCount).toString().padStart(3, '0');
-                    finalMemberChestNos[uid] = newChestNo;
-                    memberChestNoUpdates[uid] = newChestNo;
+                    let isUnique = false;
+                    while (!isUnique) {
+                        currentGlobalCount++;
+                        const candidate = (100 + currentGlobalCount).toString().padStart(3, '0');
+
+                        // Check uniqueness against existing users
+                        const userQuery = query(collection(firestore, "users"), where("chestNo", "==", candidate));
+                        const querySnap = await getDocs(userQuery);
+
+                        if (querySnap.empty) {
+                            finalMemberChestNos[uid] = candidate;
+                            memberChestNoUpdates[uid] = candidate;
+                            isUnique = true;
+                        }
+                    }
                 }
             }
 
@@ -393,8 +405,21 @@ export const updateUserSoloRegistrations = async (uid: string, newEvents: string
             if (!userChestNo && added.length > 0) {
                 globalCounterDoc = await transaction.get(globalCounterRef);
                 currentGlobalCount = globalCounterDoc.exists() ? (globalCounterDoc.data().count || 0) : 0;
-                currentGlobalCount++;
-                userChestNo = (100 + currentGlobalCount).toString().padStart(3, '0');
+
+                let isUnique = false;
+                while (!isUnique) {
+                    currentGlobalCount++;
+                    const candidate = (100 + currentGlobalCount).toString().padStart(3, '0');
+
+                    // Check uniqueness
+                    const userQuery = query(collection(firestore, "users"), where("chestNo", "==", candidate));
+                    const querySnap = await getDocs(userQuery);
+
+                    if (querySnap.empty) {
+                        userChestNo = candidate;
+                        isUnique = true;
+                    }
+                }
             }
 
             // 3. WRITES

@@ -283,9 +283,29 @@ export default function UserManagement() {
                   {user.collegeId || "-"}
                 </td>
                 <td className="p-4">
-                  <span className="bg-[#BA170D]/20 text-[#BA170D] px-3 py-1 rounded-full text-xs font-bold font-mono border border-[#BA170D]/30">
-                    {user.chestNo || "-"}
-                  </span>
+                  {user.chestNo ? (
+                    <span className="bg-[#BA170D]/20 text-[#BA170D] px-3 py-1 rounded-full text-xs font-bold font-mono border border-[#BA170D]/30">
+                      {user.chestNo}
+                    </span>
+                  ) : user.chestNumbers && user.chestNumbers.length > 0 ? (
+                    <div className="flex flex-col gap-1">
+                      {user.chestNumbers.slice(0, 2).map((cn, idx) => (
+                        <span
+                          key={idx}
+                          className="bg-gray-800 text-gray-300 px-2 py-0.5 rounded text-[10px] font-mono border border-gray-700 w-fit"
+                        >
+                          {cn}
+                        </span>
+                      ))}
+                      {user.chestNumbers.length > 2 && (
+                        <span className="text-[10px] text-gray-500">
+                          +{user.chestNumbers.length - 2} more
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-gray-600">-</span>
+                  )}
                 </td>
                 <td className="p-4">
                   <div className="flex flex-col gap-1 text-xs text-gray-400">
