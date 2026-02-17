@@ -240,13 +240,13 @@ export const createTeam = async (
             // ==========================================
             if (members.length < (eventInfo.minParticipants || 1)) throw new Error("Too few members");
 
-            // Assign numbers (logic same as before)
+            // Assign numbers starting from 101
             for (const uid of uniqueMemberIds) {
                 if (userChestNoMap[uid]) {
                     finalMemberChestNos[uid] = userChestNoMap[uid] as string;
                 } else {
                     currentGlobalCount++;
-                    const newChestNo = currentGlobalCount.toString().padStart(3, '0');
+                    const newChestNo = (100 + currentGlobalCount).toString().padStart(3, '0');
                     finalMemberChestNos[uid] = newChestNo;
                     memberChestNoUpdates[uid] = newChestNo;
                 }
@@ -394,7 +394,7 @@ export const updateUserSoloRegistrations = async (uid: string, newEvents: string
                 globalCounterDoc = await transaction.get(globalCounterRef);
                 currentGlobalCount = globalCounterDoc.exists() ? (globalCounterDoc.data().count || 0) : 0;
                 currentGlobalCount++;
-                userChestNo = currentGlobalCount.toString().padStart(3, '0');
+                userChestNo = (100 + currentGlobalCount).toString().padStart(3, '0');
             }
 
             // 3. WRITES
