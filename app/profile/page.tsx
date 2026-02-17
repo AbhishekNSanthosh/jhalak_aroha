@@ -605,55 +605,6 @@ export default function ProfilePage() {
                     </p>
                   )}
                 </div>
-                {/* Hidden Inputs for Browser Validation */}
-                <input
-                  type="text"
-                  name="department"
-                  value={formData.department}
-                  required
-                  className="opacity-0 w-0 h-0 absolute pointer-events-none"
-                  tabIndex={-1}
-                  onInvalid={(e) =>
-                    (e.target as HTMLInputElement).setCustomValidity(
-                      "Please select a Department",
-                    )
-                  }
-                  onInput={(e) =>
-                    (e.target as HTMLInputElement).setCustomValidity("")
-                  }
-                />
-                <input
-                  type="text"
-                  name="semester"
-                  value={formData.semester}
-                  required={!!formData.department} // Only required if Dept is selected (as per logic)
-                  className="opacity-0 w-0 h-0 absolute pointer-events-none"
-                  tabIndex={-1}
-                  onInvalid={(e) =>
-                    (e.target as HTMLInputElement).setCustomValidity(
-                      "Please select a Semester",
-                    )
-                  }
-                  onInput={(e) =>
-                    (e.target as HTMLInputElement).setCustomValidity("")
-                  }
-                />
-                <input
-                  type="text"
-                  name="house"
-                  value={formData.house}
-                  required
-                  className="opacity-0 w-0 h-0 absolute pointer-events-none"
-                  tabIndex={-1}
-                  onInvalid={(e) =>
-                    (e.target as HTMLInputElement).setCustomValidity(
-                      "Please select a House",
-                    )
-                  }
-                  onInput={(e) =>
-                    (e.target as HTMLInputElement).setCustomValidity("")
-                  }
-                />
 
                 <button
                   type="submit"
