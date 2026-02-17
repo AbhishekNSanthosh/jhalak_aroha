@@ -188,8 +188,18 @@ export const createTeam = async (
                 // A. Read User Profile (for Chest No)
                 const userDocRef = doc(firestore, "users", uid);
                 const userDoc = await transaction.get(userDocRef);
-                if (userDoc.exists() && userDoc.data().chestNo) {
-                    userChestNoMap[uid] = userDoc.data().chestNo;
+
+                if (!userDoc.exists()) {
+                    throw new Error(`User profile not found for member ID ${uid}. Please ensure all members have completed their profile.`);
+                }
+
+                const userData = userDoc.data();
+                if (!userData.name || !userData.department || !userData.collegeId) {
+                    throw new Error(`Profile incomplete for member ${userData.name || uid}. Please ask them to complete their profile.`);
+                }
+
+                if (userData.chestNo) {
+                    userChestNoMap[uid] = userData.chestNo;
                 } else {
                     userChestNoMap[uid] = null;
                 }
@@ -251,11 +261,15 @@ export const createTeam = async (
                         currentGlobalCount++;
                         const candidate = (100 + currentGlobalCount).toString().padStart(3, '0');
 
-                        // Check uniqueness against existing users
+                        // Check uniqueness against existing users (Legacy)
                         const userQuery = query(collection(firestore, "users"), where("chestNo", "==", candidate));
                         const querySnap = await getDocs(userQuery);
 
-                        if (querySnap.empty) {
+                        // Check uniqueness against lock collection (Transactional)
+                        const chestNoLockRef = doc(firestore, "taken_chest_numbers", candidate);
+                        const chestNoLockDoc = await transaction.get(chestNoLockRef);
+
+                        if (querySnap.empty && !chestNoLockDoc.exists()) {
                             finalMemberChestNos[uid] = candidate;
                             memberChestNoUpdates[uid] = candidate;
                             isUnique = true;
@@ -279,10 +293,14 @@ export const createTeam = async (
                 transaction.set(globalCounterRef, { count: currentGlobalCount }, { merge: true });
             }
 
-            // B. Update User Docs with new chest numbers
+            // B. Update User Docs with new chest numbers AND Lock the number
             for (const [uid, newNo] of Object.entries(memberChestNoUpdates)) {
                 const userDocRef = doc(firestore, "users", uid);
                 transaction.set(userDocRef, { chestNo: newNo }, { merge: true });
+
+                // Create Lock Doc
+                const chestNoLockRef = doc(firestore, "taken_chest_numbers", newNo);
+                transaction.set(chestNoLockRef, { uid, createdAt: serverTimestamp() });
             }
 
             // C. Update Member Registration Docs (Add Team Event)
@@ -397,7 +415,17 @@ export const updateUserSoloRegistrations = async (uid: string, newEvents: string
             // Read User Doc if chest number is needed
             const userDocRef = doc(firestore, "users", uid);
             const userDoc = await transaction.get(userDocRef);
-            let userChestNo = userDoc.exists() ? userDoc.data().chestNo : null;
+
+            if (!userDoc.exists()) {
+                throw new Error("User profile not found. Please complete your profile first.");
+            }
+
+            const userData = userDoc.data();
+            if (!userData.name || !userData.department || !userData.collegeId) {
+                throw new Error("Profile incomplete. Please fill all required details in Profile.");
+            }
+
+            let userChestNo = userData.chestNo || null;
             let globalCounterRef = doc(firestore, "counters", "user_chest_numbers");
             let globalCounterDoc = null;
             let currentGlobalCount = 0;
@@ -411,11 +439,15 @@ export const updateUserSoloRegistrations = async (uid: string, newEvents: string
                     currentGlobalCount++;
                     const candidate = (100 + currentGlobalCount).toString().padStart(3, '0');
 
-                    // Check uniqueness
+                    // Check uniqueness (Legacy)
                     const userQuery = query(collection(firestore, "users"), where("chestNo", "==", candidate));
                     const querySnap = await getDocs(userQuery);
 
-                    if (querySnap.empty) {
+                    // Check uniqueness (Transactional Lock)
+                    const chestNoLockRef = doc(firestore, "taken_chest_numbers", candidate);
+                    const chestNoLockDoc = await transaction.get(chestNoLockRef);
+
+                    if (querySnap.empty && !chestNoLockDoc.exists()) {
                         userChestNo = candidate;
                         isUnique = true;
                     }
@@ -426,6 +458,12 @@ export const updateUserSoloRegistrations = async (uid: string, newEvents: string
             if ((!userDoc.exists() || !userDoc.data().chestNo) && added.length > 0) {
                 transaction.set(globalCounterRef, { count: currentGlobalCount }, { merge: true });
                 transaction.set(userDocRef, { chestNo: userChestNo }, { merge: true });
+
+                // Lock the number
+                if (userChestNo) {
+                    const chestNoLockRef = doc(firestore, "taken_chest_numbers", userChestNo);
+                    transaction.set(chestNoLockRef, { uid, createdAt: serverTimestamp() });
+                }
             }
 
             // Handle Removed
