@@ -373,7 +373,7 @@ export default function ProfilePage() {
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="bg-black/40 backdrop-blur-xl border border-white/10 p-8 rounded-2xl w-full max-w-xl shadow-2xl flex-1 relative"
+              className="bg-black/40 backdrop-blur-xl border border-white/10 p-8 md:p-10 rounded-2xl w-full max-w-xl lg:max-w-xl shadow-2xl flex-1 relative"
             >
               {/* Logout Button - Absolute Top Right */}
               <button
@@ -385,7 +385,7 @@ export default function ProfilePage() {
                   size={16}
                   className="group-hover/logout:scale-110 transition-transform"
                 />
-                <span className="text-xs font-bold uppercase tracking-wider">
+                <span className="text-xs md:text-sm font-black uppercase tracking-[0.2em]">
                   Logout
                 </span>
               </button>
@@ -403,15 +403,15 @@ export default function ProfilePage() {
                     <div className="w-full h-full bg-[#BA170D]" />
                   )}
                 </div>
-                <h1 className="text-3xl md:text-4xl font-black font-unbounded text-white text-center tracking-tighter mb-2 uppercase">
+                <h1 className="text-3xl md:text-5xl font-black font-unbounded text-white text-center tracking-tighter mb-2 uppercase">
                   YOUR PROFILE
                 </h1>
                 {userChestNo && (
-                  <div className="mb-2 px-6 py-2 bg-[#BA170D]/20 border-2 border-[#BA170D] rounded-lg">
-                    <p className="text-xs font-black text-white/60 uppercase tracking-widest mb-0.5">
+                  <div className="mb-4 px-6 py-2 bg-[#BA170D]/10 border border-[#BA170D]/30 rounded-full">
+                    <p className="text-[10px] font-black font-unbounded text-white/40 uppercase tracking-[0.2em] mb-0.5 text-center">
                       Chest Number
                     </p>
-                    <p className="text-3xl font-black font-unbounded text-[#BA170D] tracking-tight">
+                    <p className="text-3xl md:text-4xl font-black font-unbounded text-[#BA170D] tracking-tighter text-center">
                       #{userChestNo}
                     </p>
                   </div>
@@ -424,7 +424,7 @@ export default function ProfilePage() {
               <form onSubmit={handleSubmit} className="flex flex-col gap-8">
                 {/* Name */}
                 <div>
-                  <label className="block text-[10px] font-black text-[#BA170D] uppercase tracking-[0.2em] mb-3 ml-1">
+                  <label className="block text-[10px] font-black text-[#BA170D]/60 uppercase tracking-[0.3em] mb-3 ml-1">
                     Full Name <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -441,7 +441,7 @@ export default function ProfilePage() {
 
                 {/* College ID */}
                 <div>
-                  <label className="block text-[10px] font-black text-[#BA170D] uppercase tracking-[0.2em] mb-3 ml-1">
+                  <label className="block text-[10px] font-black text-[#BA170D]/60 uppercase tracking-[0.3em] mb-3 ml-1">
                     College ID <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -460,7 +460,7 @@ export default function ProfilePage() {
 
                 {/* Mobile Number */}
                 <div>
-                  <label className="block text-[10px] font-black text-[#BA170D] uppercase tracking-[0.2em] mb-3 ml-1">
+                  <label className="block text-[10px] font-black text-[#BA170D]/60 uppercase tracking-[0.3em] mb-3 ml-1">
                     Mobile Number <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -477,7 +477,7 @@ export default function ProfilePage() {
 
                 {/* Department */}
                 <div>
-                  <label className="block text-[10px] font-black text-[#BA170D] uppercase tracking-[0.2em] mb-3 ml-1">
+                  <label className="block text-[10px] font-black text-[#BA170D]/60 uppercase tracking-[0.3em] mb-3 ml-1">
                     Department <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-2 gap-3">
@@ -516,7 +516,7 @@ export default function ProfilePage() {
                     animate={{ opacity: 1, height: "auto" }}
                     className="overflow-hidden"
                   >
-                    <label className="block text-[10px] font-black text-[#BA170D] uppercase tracking-[0.2em] mb-3 ml-1">
+                    <label className="block text-[10px] font-black text-[#BA170D]/60 uppercase tracking-[0.3em] mb-3 ml-1">
                       Semester <span className="text-red-500">*</span>
                     </label>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -550,7 +550,7 @@ export default function ProfilePage() {
 
                 {/* House */}
                 <div>
-                  <label className="block text-[10px] font-black text-[#BA170D] uppercase tracking-[0.2em] mb-3 ml-1">
+                  <label className="block text-[10px] font-black text-[#BA170D]/60 uppercase tracking-[0.3em] mb-3 ml-1">
                     House <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -616,10 +616,10 @@ export default function ProfilePage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-black/40 backdrop-blur-xl border border-white/10 p-8 md:p-10 rounded-2xl w-full max-w-xl shadow-2xl flex-1 flex flex-col h-full self-stretch"
+              className="bg-black/40 backdrop-blur-xl border border-white/10 p-8 md:p-10 rounded-2xl w-full max-w-xl lg:max-w-xl shadow-2xl flex-1 flex flex-col h-full self-stretch"
             >
               <div className="flex flex-col items-center mb-10">
-                <h2 className="text-3xl md:text-4xl font-black font-unbounded text-white text-center tracking-tighter mb-2 uppercase">
+                <h2 className="text-3xl md:text-5xl font-black font-unbounded text-white text-center tracking-tighter mb-2 uppercase">
                   YOUR EVENTS
                 </h2>
                 <p className="text-gray-400 mt-1 text-center text-sm md:text-base tracking-wide">
@@ -659,7 +659,7 @@ export default function ProfilePage() {
                         key={i}
                         className="flex flex-col items-center px-4 py-3 bg-white/5 border border-white/10 rounded-xl min-w-[120px]"
                       >
-                        <span className="text-[9px] font-black text-white/40 mb-1 tracking-[0.2em]">
+                        <span className="text-[10px] font-black text-white/30 mb-1 tracking-[0.3em] uppercase">
                           {p.label}
                         </span>
                         <span
@@ -725,11 +725,11 @@ export default function ProfilePage() {
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex flex-col gap-1">
-                            <span className="font-bold text-white text-base group-hover:text-[#BA170D] transition-all leading-tight">
+                            <span className="font-black font-unbounded text-white text-base group-hover:text-[#BA170D] transition-all tracking-tighter">
                               {item.title}
                             </span>
                             <span
-                              className={`text-[8px] font-black uppercase tracking-[0.2em] ${theme.color}`}
+                              className={`text-[9px] font-black uppercase tracking-[0.3em] ${theme.color} opacity-80`}
                             >
                               {theme.label}
                             </span>
@@ -771,12 +771,41 @@ export default function ProfilePage() {
                             )}
                             {item.team.teamName && (
                               <div className="text-[10px] text-gray-500 flex items-center gap-2">
-                                <span className="uppercase tracking-widest">
+                                <span className="uppercase tracking-[0.2em] text-[10px] font-black text-gray-600">
                                   Team:
                                 </span>
-                                <span className="text-white/60 font-medium italic uppercase">
+                                <span className="text-white/40 font-bold uppercase tracking-wider text-[10px]">
                                   {item.team.teamName}
                                 </span>
+                              </div>
+                            )}
+
+                            {/* Team Members List */}
+                            {item.team.members && item.team.members.length > 0 && (
+                              <div className="mt-4 pt-3 border-t border-white/5">
+                                <p className="text-[10px] font-black text-[#BA170D]/40 uppercase tracking-[0.3em] mb-3">
+                                  Team Members
+                                </p>
+                                <div className="space-y-1.5">
+                                  {item.team.members.map((m: any, idx: number) => (
+                                    <div key={idx} className="flex items-center gap-2 text-[11px]">
+                                      <div className="w-4 h-4 rounded-full bg-white/5 flex items-center justify-center text-[8px] text-gray-400 border border-white/10 shrink-0">
+                                        {m.role === "leader" ? "L" : idx + 1}
+                                      </div>
+                                      <span className="text-gray-300 font-medium">
+                                        {m.uid === user?.uid ? "You" : m.name}
+                                      </span>
+                                      {m.role === "leader" && (
+                                        <span className="text-[8px] text-[#BA170D] font-black uppercase tracking-tighter">
+                                          (Leader)
+                                        </span>
+                                      )}
+                                      <span className="text-[9px] text-gray-600 truncate opacity-60">
+                                        {m.email}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             )}
                           </div>

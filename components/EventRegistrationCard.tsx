@@ -322,7 +322,7 @@ export default function EventRegistrationCard({
 
         {/* Group Registration Area */}
         <AnimatePresence>
-          {isGroup && (isExpanded || isSelected) && !isLocked && (
+          {isGroup && (isExpanded || isSelected) && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
@@ -336,29 +336,28 @@ export default function EventRegistrationCard({
                     Your Team
                   </h4>
                   <ul className="space-y-2 mb-4">
+                    {/* Leader */}
                     <li className="text-sm text-white flex items-center gap-2">
                       <div className="w-6 h-6 rounded-full bg-[#BA170D] flex items-center justify-center text-white text-xs font-bold">
                         L
                       </div>
-                      You (Leader)
+                      {teamDetails?.members.find((m) => m.role === "leader")
+                        ?.uid === currentUser.uid
+                        ? "You (Leader)"
+                        : `${teamDetails?.members.find((m) => m.role === "leader")?.name || "Leader"} (Leader)`}
                     </li>
+                    {/* Other Members */}
                     {teamDetails?.members
-                      .filter(
-                        (m) =>
-                          m.role !== "leader" &&
-                          m.uid !== currentUser.uid &&
-                          m.email?.toLowerCase() !==
-                            currentUser.email?.toLowerCase(),
-                      )
+                      .filter((m) => m.role === "member")
                       .map((m, i) => (
                         <li
                           key={i}
                           className="text-sm text-gray-300 flex items-center gap-2"
                         >
                           <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs">
-                            M
+                            {m.uid === currentUser.uid ? "Y" : "M"}
                           </div>
-                          {m.name}{" "}
+                          {m.uid === currentUser.uid ? "You" : m.name}
                           <span className="text-xs text-gray-500">
                             ({m.email})
                           </span>
