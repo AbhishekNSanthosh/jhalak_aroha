@@ -335,35 +335,71 @@ export default function EventRegistrationCard({
                   <h4 className="text-sm font-bold text-[#BA170D] mb-2">
                     Your Team
                   </h4>
-                  <ul className="space-y-2 mb-4">
+                  <div className="space-y-2 mb-4">
                     {/* Leader */}
-                    <li className="text-sm text-white flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-[#BA170D] flex items-center justify-center text-white text-xs font-bold">
-                        L
-                      </div>
-                      {teamDetails?.members.find((m) => m.role === "leader")
-                        ?.uid === currentUser.uid
-                        ? "You (Leader)"
-                        : `${teamDetails?.members.find((m) => m.role === "leader")?.name || "Leader"} (Leader)`}
-                    </li>
+                    {(() => {
+                      const leader = teamDetails?.members.find(
+                        (m) => m.role === "leader",
+                      );
+                      const isMe = leader?.uid === currentUser.uid;
+                      return (
+                        <div className="group/member flex justify-between items-center text-sm bg-white/5 pl-3 pr-2 py-2.5 rounded-lg border border-[#BA170D]/30 hover:bg-white/10 transition-colors">
+                          <div className="flex items-center gap-3 overflow-hidden min-w-0">
+                            <div className="shrink-0 w-8 h-8 rounded-full bg-[#BA170D] flex items-center justify-center text-white text-xs font-bold ring-1 ring-[#BA170D]/50 shadow-[0_0_10px_rgba(186,23,13,0.3)]">
+                              L
+                            </div>
+                            <div className="flex flex-col min-w-0 overflow-hidden">
+                              <p className="text-white font-bold truncate leading-tight">
+                                {isMe
+                                  ? "You (Leader)"
+                                  : `${leader?.name || "Leader"} (Leader)`}
+                              </p>
+                              <div className="w-full overflow-hidden relative h-4 mt-0.5">
+                                <p
+                                  className="text-xs text-gray-400 font-mono whitespace-nowrap absolute left-0 top-0 transition-transform duration-[3000ms] ease-linear group-hover/member:-translate-x-[30%]"
+                                  title={leader?.email}
+                                >
+                                  {leader?.email}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     {/* Other Members */}
                     {teamDetails?.members
                       .filter((m) => m.role === "member")
                       .map((m, i) => (
-                        <li
+                        <div
                           key={i}
-                          className="text-sm text-gray-300 flex items-center gap-2"
+                          className="group/member flex justify-between items-center text-sm bg-white/5 pl-3 pr-2 py-2.5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors"
                         >
-                          <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs">
-                            {m.uid === currentUser.uid ? "Y" : "M"}
+                          <div className="flex items-center gap-3 overflow-hidden min-w-0">
+                            <div className="shrink-0 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white text-xs font-bold ring-1 ring-white/10">
+                              {m.uid === currentUser.uid ? "Y" : "M"}
+                            </div>
+                            <div className="flex flex-col min-w-0 overflow-hidden">
+                              <p
+                                className="text-white font-bold truncate leading-tight"
+                                title={m.name}
+                              >
+                                {m.uid === currentUser.uid ? "You" : m.name}
+                              </p>
+                              <div className="w-full overflow-hidden relative h-4 mt-0.5">
+                                <p
+                                  className="text-xs text-gray-400 font-mono whitespace-nowrap absolute left-0 top-0 transition-transform duration-[3000ms] ease-linear group-hover/member:-translate-x-[30%]"
+                                  title={m.email}
+                                >
+                                  {m.email}
+                                </p>
+                              </div>
+                            </div>
                           </div>
-                          {m.uid === currentUser.uid ? "You" : m.name}
-                          <span className="text-xs text-gray-500">
-                            ({m.email})
-                          </span>
-                        </li>
+                        </div>
                       ))}
-                  </ul>
+                  </div>
                   <button
                     onClick={onLeaveTeam}
                     className="text-xs text-red-500 hover:text-red-400 underline"
@@ -510,20 +546,28 @@ export default function EventRegistrationCard({
                       {teamMembers.map((m, idx) => (
                         <div
                           key={m.email}
-                          className="flex justify-between items-center text-sm bg-white/5 px-3 py-2 rounded-lg border border-white/10"
+                          className="group/member flex justify-between items-center text-sm bg-white/5 pl-3 pr-2 py-2.5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors"
                         >
-                          <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-[#BA170D]/20 flex items-center justify-center text-[#BA170D] text-xs font-bold">
+                          <div className="flex items-center gap-3 overflow-hidden min-w-0">
+                            <div className="shrink-0 w-8 h-8 rounded-full bg-[#BA170D]/20 flex items-center justify-center text-[#BA170D] text-xs font-bold ring-1 ring-[#BA170D]/30">
                               {idx + 1}
                             </div>
-                            <div>
-                              <p className="text-white font-medium">
+                            <div className="flex flex-col min-w-0 overflow-hidden">
+                              <p
+                                className="text-white font-bold truncate leading-tight"
+                                title={m.name || m.email}
+                              >
                                 {m.name || m.email}
                               </p>
                               {m.name && (
-                                <p className="text-xs text-gray-500">
-                                  {m.email}
-                                </p>
+                                <div className="w-full overflow-hidden relative h-4 mt-0.5">
+                                  <p
+                                    className="text-xs text-gray-400 font-mono whitespace-nowrap absolute left-0 top-0 transition-transform duration-[3000ms] ease-linear group-hover/member:-translate-x-[30%]"
+                                    title={m.email}
+                                  >
+                                    {m.email}
+                                  </p>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -535,12 +579,10 @@ export default function EventRegistrationCard({
                                 ),
                               )
                             }
-                            className="p-1 hover:bg-red-500/20 rounded transition-colors"
+                            className="p-1.5 ml-2 hover:bg-red-500/20 text-gray-500 hover:text-red-400 rounded-md transition-colors shrink-0"
+                            title="Remove member"
                           >
-                            <X
-                              size={16}
-                              className="text-gray-500 hover:text-red-400"
-                            />
+                            <X size={16} />
                           </button>
                         </div>
                       ))}

@@ -221,13 +221,22 @@ export default function RegisterPage() {
         <ConfirmToast
           t={t}
           message="Are you sure you want to leave/disband this team?"
+
           onConfirm={async () => {
+            // Optimistic UI Update: Remove team immediately from view
+            setRegistrations((prev) => ({
+              ...prev,
+              teamEvents: prev.teamEvents.filter((t) => t.id !== teamId),
+              totalCount: prev.totalCount - 1,
+            }));
+
             const result = await leaveTeam(user.uid, teamId);
             if (result.success) {
               toast.success("Left team successfully");
               refreshData();
             } else {
               toast.error(result.message || "Failed to leave team");
+              refreshData(); // Revert on failure (implied by re-fetch)
             }
           }}
         />
@@ -235,6 +244,7 @@ export default function RegisterPage() {
       { duration: Infinity },
     );
   };
+
 
 
   return (

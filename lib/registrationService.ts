@@ -103,29 +103,73 @@ export const fetchUserRegistrations = async (uid: string): Promise<UserRegistrat
     if (!db || !uid) return { soloEvents: [], teamEvents: [], totalCount: 0 };
     const firestore = db;
 
+
     try {
-        // 1. Fetch Solo Registrations
+        // 1. Fetch Solo Registrations (and cached team events)
         const soloDocRef = doc(firestore, "registrations", uid);
         const soloDoc = await getDoc(soloDocRef);
         let soloEvents: string[] = [];
+        let cachedTeamEvents: string[] = [];
+
         if (soloDoc.exists()) {
-            soloEvents = (soloDoc.data() as SoloRegistration).events || [];
+            const data = soloDoc.data() as SoloRegistration;
+            soloEvents = data.events || [];
+            cachedTeamEvents = data.teamEvents || [];
         }
 
-        // 2. Fetch Team Registrations
+        // 2. Fetch Team Registrations (Source of Truth)
         const teamsRef = collection(firestore, "teams");
         const q = query(teamsRef, where("memberIds", "array-contains", uid));
         const querySnapshot = await getDocs(q);
         const teamEvents: TeamRegistration[] = [];
+        const actualTeamEventTitles: string[] = [];
+
         querySnapshot.forEach((doc) => {
-            teamEvents.push({ id: doc.id, ...doc.data() } as TeamRegistration);
+            const teamData = doc.data() as TeamRegistration;
+            teamEvents.push({ id: doc.id, ...teamData });
+            if (teamData.eventTitle) {
+                actualTeamEventTitles.push(teamData.eventTitle);
+            }
         });
+
+        // 3. Self-Healing: Sync if mismatch
+        // We only care if cached has MORE than actual (blocking registration) or LESS (allowing over-registration)
+        // But simply syncing to actual is best.
+        const cachedSet = new Set(cachedTeamEvents);
+        const actualSet = new Set(actualTeamEventTitles);
+
+        let needsUpdate = false;
+        if (cachedSet.size !== actualSet.size) needsUpdate = true;
+        else {
+            for (const t of actualSet) {
+                if (!cachedSet.has(t)) {
+                    needsUpdate = true;
+                    break;
+                }
+            }
+        }
+
+        if (needsUpdate) {
+            console.log(`[Auto-Fix] Syncing team events for ${uid}. Cached: ${cachedTeamEvents.length}, Actual: ${actualTeamEventTitles.length}`);
+            // Fire and forget update (or await if critical, but Fire/Forget is better for UX speed, 
+            // though for immediate sequential actions await might be safer. Let's await to be safe.)
+            try {
+                await setDoc(soloDocRef, {
+                    userId: uid, // Ensure field exists
+                    teamEvents: actualTeamEventTitles,
+                    lastUpdated: new Date().toISOString()
+                }, { merge: true });
+            } catch (err) {
+                console.error("Failed to auto-heal registrations:", err);
+            }
+        }
 
         return { soloEvents, teamEvents, totalCount: soloEvents.length + teamEvents.length };
     } catch (error) {
         console.error("Error fetching registrations:", error);
         return { soloEvents: [], teamEvents: [], totalCount: 0 };
     }
+
 };
 
 
