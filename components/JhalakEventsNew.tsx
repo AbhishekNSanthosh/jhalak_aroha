@@ -80,19 +80,24 @@ export default function JhalakEventsNew() {
       </div>
 
       <div className="container mx-auto relative z-10 max-w-7xl">
-        {/* Header */}
-        <div className="text-center mb-12 events-header-new">
-          <h2 className="text-[#BA170D] font-cinzel font-bold text-sm uppercase tracking-[0.3em] mb-3">
-            {activeTab === "onstage"
-              ? "ON-STAGE EVENTS"
-              : activeTab === "offstage"
-                ? "OFF-STAGE EVENTS"
-                : "ONLINE EVENTS"}
-          </h2>
-          <h3 className="text-4xl md:text-6xl font-light tracking-tight mb-8">
-            JHALAK{" "}
-            <span className="font-serif italic text-white/50">Events</span>
-          </h3>
+        {/* Header Section */}
+        <div className="text-center mb-16 events-header-new">
+          <div className="mb-12">
+            <h2 className="text-[#BA170D] font-cinzel font-bold text-xs md:text-sm uppercase tracking-[0.3em] mb-4">
+              {activeTab === "onstage"
+                ? "ON-STAGE EVENTS"
+                : activeTab === "offstage"
+                  ? "OFF-STAGE EVENTS"
+                  : "ONLINE EVENTS"}
+            </h2>
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-light tracking-tight mb-4">
+              JHALAK{" "}
+              <span className="font-serif italic text-white/50">Events</span>
+            </h1>
+            <p className="text-gray-400 text-sm md:text-base max-w-2xl mx-auto">
+              Showcase your talent at Carmel College's biggest cultural fest
+            </p>
+          </div>
 
           {/* Search Bar */}
           <div className="max-w-xl mx-auto mb-8">
@@ -320,7 +325,10 @@ export default function JhalakEventsNew() {
               <p className="text-white/30 text-xs text-center font-mono mb-3">
                 * Judges' decision will be final and binding.
               </p>
-              <Link href="/register" className="block w-full text-center py-3 bg-[#BA170D] hover:bg-[#900000] text-white font-bold rounded-lg transition-all">
+              <Link
+                href="/register"
+                className="block w-full text-center py-3 bg-[#BA170D] hover:bg-[#900000] text-white font-bold rounded-lg transition-all"
+              >
                 Register for this Event
               </Link>
             </div>

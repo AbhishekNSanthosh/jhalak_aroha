@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Users Collection
+    // Anyone can read profiles (needed for team search)
+    // Owner can write, Admin can write (to change roles)
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId) || isAdmin();
+    }
+
+    // Registrations Collection (Solo Events)
+    // Doc ID is the userId
+    match /registrations/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Teams Collection (Group Events)
+    match /teams/{teamId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && resource.data.leaderId == request.auth.uid;
+    }
+
+    // Counters for Chest Numbers
+    match /counters/{eventId} {
+      allow read, write: if isSignedIn(); // Needed for transactions
+    }
+
+    // Individual Registration Details (For Admin/Export)
+    match /event_registrations/{regId} {
+      // Allow reading: Owner, Admin, or if it's a team registration (members might need to see)
+      allow read: if isSignedIn(); 
+      // Allow create/write: Owner (transaction)
+      allow write: if isSignedIn();
+    }
+
+  }
+}
