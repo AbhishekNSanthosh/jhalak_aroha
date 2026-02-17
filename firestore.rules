@@ -20,7 +20,9 @@ service cloud.firestore {
     // Owner can write, Admin can write (to change roles)
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow write: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) || isAdmin();
+      allow update: if isOwner(userId) || isAdmin() || (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['chestNo']));
+      allow delete: if isOwner(userId) || isAdmin();
     }
 
     // Registrations Collection (Solo Events)
