@@ -8,6 +8,7 @@ import {
   EventRule,
   EventCategory,
 } from "@/data/jhalakEventsData";
+import Link from "next/link";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -217,8 +218,8 @@ export default function JhalakEventsNew() {
 
         {/* Register Button */}
         <div className="flex justify-center">
-          <a
-            href="#register"
+          <Link
+            href="/register"
             className="group relative px-12 py-4 bg-[#BA170D] hover:bg-[#900000] text-white font-cinzel font-bold tracking-widest uppercase transition-all duration-300 shadow-[0_0_30px_rgba(186,23,13,0.4)] hover:shadow-[0_0_50px_rgba(186,23,13,0.6)] overflow-hidden rounded-lg"
           >
             <span className="relative z-10 flex items-center gap-3">
@@ -240,7 +241,7 @@ export default function JhalakEventsNew() {
               </svg>
             </span>
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out"></div>
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -319,9 +320,9 @@ export default function JhalakEventsNew() {
               <p className="text-white/30 text-xs text-center font-mono mb-3">
                 * Judges' decision will be final and binding.
               </p>
-              <button className="w-full py-3 bg-[#BA170D] hover:bg-[#900000] text-white font-bold rounded-lg transition-all">
+              <Link href="/register" className="block w-full text-center py-3 bg-[#BA170D] hover:bg-[#900000] text-white font-bold rounded-lg transition-all">
                 Register for this Event
-              </button>
+              </Link>
             </div>
           </div>
         </div>
