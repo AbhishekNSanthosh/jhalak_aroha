@@ -130,7 +130,7 @@ function LoginContent() {
                 width={128} 
                 height={128} 
                 priority
-                unoptimized
+                quality={50}
                 style={{ width: '100%', height: 'auto' }}
                 className="object-contain" 
                />
