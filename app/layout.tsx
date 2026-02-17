@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Cinzel_Decorative } from "next/font/google";
 import "./globals.css";
 import SmoothScroll from "@/components/SmoothScroll";
 import { Toaster } from "react-hot-toast";
+import ProfileGuard from "@/components/ProfileGuard";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -78,7 +79,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} antialiased`}
       >
-        <SmoothScroll>{children}</SmoothScroll>
+        <SmoothScroll>
+          <ProfileGuard>{children}</ProfileGuard>
+        </SmoothScroll>
+
         <Toaster position="top-right" />
       </body>
     </html>
