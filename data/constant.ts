@@ -38,6 +38,25 @@ export interface UserProfile {
     role?: 'user' | 'organizer' | 'admin';
 }
 
+export const isProfileComplete = (profile: any): boolean => {
+    if (!profile) return false;
+    const { name, department, semester, house, mobile, collegeId } = profile;
+
+    // Check for presence and non-empty strings
+    const hasValue = (val: string | undefined) => val && val.trim().length > 0;
+
+    if (!hasValue(name)) return false;
+    if (!hasValue(department)) return false;
+    if (!hasValue(semester)) return false;
+    if (!hasValue(house)) return false;
+    if (!hasValue(collegeId)) return false;
+
+    // Mobile strict check (must be more than just "+91")
+    if (!mobile || !mobile.trim() || mobile.trim() === "+91" || mobile.length < 10) return false;
+
+    return true;
+};
+
 
 
 export interface TeamMember {

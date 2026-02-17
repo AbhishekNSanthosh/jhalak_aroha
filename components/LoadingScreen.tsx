@@ -52,7 +52,7 @@ export default function LoadingScreen({ onComplete }: { onComplete: () => void }
             />
             
             <Image 
-                src="/logo.png" 
+                src="/Logo.png" 
                 alt="Jhalak Logo"
                 fill
                 sizes="(max-width: 768px) 192px, 256px"

@@ -143,7 +143,7 @@ export default function AdminLayout({
         {/* Sidebar (Desktop) */}
         <aside className="w-64 bg-black/40 border-r border-white/10 hidden md:block fixed h-screen overflow-y-auto">
           <div className="p-6 border-b border-white/10 flex items-center gap-3">
-            <Image src="/logo.png" alt="Logo" width={32} height={32} />
+            <Image src="/Logo.png" alt="Logo" width={32} height={32} quality={50} />
             <span className="font-black font-unbounded text-lg tracking-tight">
               ADMIN
             </span>
@@ -157,7 +157,7 @@ export default function AdminLayout({
         {/* Mobile Header */}
         <div className="md:hidden fixed top-0 left-0 right-0 bg-black/90 backdrop-blur-md border-b border-white/10 z-50 px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <Image src="/logo.png" alt="Logo" width={24} height={24} />
+            <Image src="/Logo.png" alt="Logo" width={24} height={24} quality={50} />
             <span className="font-black font-unbounded text-sm">
               ADMIN PANEL
             </span>

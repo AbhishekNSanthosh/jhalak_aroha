@@ -123,7 +123,7 @@ export default function Hero({ startAnimation = true }: { startAnimation?: boole
                 <div className="absolute inset-0 bg-[#FFD700] rounded-full blur-2xl opacity-20 hover:opacity-40 transition-opacity duration-500"></div>
                 
                 <Image 
-                    src="/logo.png" 
+                    src="/Logo.png" 
                     alt="Jhalak Logo" 
                     fill
                     className="object-contain drop-shadow-[0_0_20px_rgba(255,215,0,0.3)]"

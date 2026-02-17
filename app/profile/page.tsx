@@ -31,6 +31,7 @@ import {
   DEPARTMENTS,
   SEMESTERS,
   CSE_SEMESTERS,
+  isProfileComplete,
 } from "@/data/constant";
 import Navbar from "@/components/Navbar";
 import { ArrowLeft, LogOut } from "lucide-react";
@@ -119,6 +120,7 @@ export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
 
   const [registrations, setRegistrations] = useState<UserRegistrations>({
     soloEvents: [],
@@ -189,6 +191,7 @@ export default function ProfilePage() {
               chestNo: userData.chestNo || "",
             });
             setUserChestNo(userData.chestNo || "");
+            setIsComplete(isProfileComplete(userData));
           } else {
             setFormData((prev) => ({
               ...prev,
@@ -357,16 +360,18 @@ export default function ProfilePage() {
 
       <div className="relative z-10 container mx-auto px-4 py-24">
         <div className="max-w-7xl mx-auto flex flex-col gap-8">
-          {/* Back Button */}
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-400 hover:text-[#BA170D] transition-colors self-start group"
-          >
-            <div className="p-2 rounded-full bg-white/5 group-hover:bg-[#BA170D]/10 border border-white/10 group-hover:border-[#BA170D]/50 transition-all">
-              <ArrowLeft size={20} />
-            </div>
-            <span className="font-medium">Back</span>
-          </button>
+          {/* Back Button - Conditional */}
+          {isComplete && (
+            <button
+              onClick={() => router.back()}
+              className="flex items-center gap-2 text-gray-400 hover:text-[#BA170D] transition-colors self-start group"
+            >
+              <div className="p-2 rounded-full bg-white/5 group-hover:bg-[#BA170D]/10 border border-white/10 group-hover:border-[#BA170D]/50 transition-all">
+                <ArrowLeft size={20} />
+              </div>
+              <span className="font-medium">Back</span>
+            </button>
+          )}
 
           <div className="flex flex-col md:flex-row gap-8 items-start w-full">
             {/* Profile Form Section */}

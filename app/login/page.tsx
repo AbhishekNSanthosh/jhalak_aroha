@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { auth, googleProvider } from "@/lib/firebase";
+import { auth, googleProvider, db } from "@/lib/firebase";
 import { signInWithPopup, onAuthStateChanged } from "firebase/auth";
 import { useRouter, useSearchParams } from "next/navigation";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
 import Image from "next/image";
 
@@ -47,7 +48,36 @@ function LoginContent() {
     setError(null);
     try {
       console.log("Initiating Google Popup...");
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      if (user) {
+          // Check if user exists to prevent overwriting manual changes
+          const userRef = doc(db, "users", user.uid);
+          const userSnap = await getDoc(userRef);
+          const userData = userSnap.exists() ? userSnap.data() : {};
+
+          const updates: any = {
+              uid: user.uid,
+              email: user.email || "",
+              lastLogin: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+          };
+
+          // Only set fields if they are missing in Firestore or if user is new
+          if (!userData.name && user.displayName) {
+              updates.name = user.displayName;
+          }
+          if (!userData.photoURL && user.photoURL) {
+              updates.photoURL = user.photoURL;
+          }
+          if (!userData.mobile && user.phoneNumber) {
+              updates.mobile = user.phoneNumber;
+          }
+
+          await setDoc(userRef, updates, { merge: true });
+      }
+
       // onAuthStateChanged will catch the user and redirect automatically
     } catch (err: any) {
       console.error("Popup Login Error:", err);
@@ -100,7 +130,7 @@ function LoginContent() {
                 width={128} 
                 height={128} 
                 priority
-                unoptimized
+                quality={50}
                 style={{ width: '100%', height: 'auto' }}
                 className="object-contain" 
                />
