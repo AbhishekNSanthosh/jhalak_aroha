@@ -17,6 +17,11 @@ export default function UserManagement() {
   const [roleFilter, setRoleFilter] = useState<
     "all" | "admin" | "user" | "organizer"
   >("all"); // Add organizer type
+  const [houseFilter, setHouseFilter] = useState<string>("all");
+  const [sortConfig, setSortConfig] = useState<{
+    key: keyof AdminUserView | "chestNo";
+    direction: "asc" | "desc";
+  }>({ key: "name", direction: "asc" });
 
   // Toast State
   const [uiToast, setUiToast] = useState<{
@@ -67,17 +72,70 @@ export default function UserManagement() {
     showToast("Excel exported successfully!", "success");
   };
 
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      (user.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-      (user.email?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-      (user.mobile && user.mobile.includes(searchTerm));
+  const filteredUsers = users
+    .filter((user) => {
+      const matchesSearch =
+        (user.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+        (user.email?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+        (user.mobile && user.mobile.includes(searchTerm));
 
-    const matchesRole =
-      roleFilter === "all" || (user.role || "user") === roleFilter;
+      const matchesRole =
+        roleFilter === "all" || (user.role || "user") === roleFilter;
 
-    return matchesSearch && matchesRole;
-  });
+      const matchesHouse =
+        houseFilter === "all" || (user.house || "Unknown") === houseFilter;
+
+      return matchesSearch && matchesRole && matchesHouse;
+    })
+    .sort((a, b) => {
+      const aValue = a[sortConfig.key as keyof AdminUserView];
+      const bValue = b[sortConfig.key as keyof AdminUserView];
+
+      if (sortConfig.key === "chestNo") {
+        // Special handling for chestNo which might be string or number
+        // Prioritize primary chestNo, then first in array
+        const getChestVal = (u: AdminUserView) => {
+          if (u.chestNo) return u.chestNo;
+          if (u.chestNumbers && u.chestNumbers.length > 0)
+            return u.chestNumbers[0];
+          return "";
+        };
+        const valA = getChestVal(a);
+        const valB = getChestVal(b);
+
+        // Numeric sort if possible
+        const numA = parseInt(valA);
+        const numB = parseInt(valB);
+        if (!isNaN(numA) && !isNaN(numB)) {
+          return sortConfig.direction === "asc" ? numA - numB : numB - numA;
+        }
+        return sortConfig.direction === "asc"
+          ? valA.localeCompare(valB)
+          : valB.localeCompare(valA);
+      }
+
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        return sortConfig.direction === "asc"
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortConfig.direction === "asc"
+          ? aValue - bValue
+          : bValue - aValue;
+      }
+
+      return 0;
+    });
+
+  const handleSort = (key: keyof AdminUserView | "chestNo") => {
+    setSortConfig((current) => ({
+      key,
+      direction:
+        current.key === key && current.direction === "asc" ? "desc" : "asc",
+    }));
+  };
 
   if (loading)
     return (
@@ -215,6 +273,18 @@ export default function UserManagement() {
             <option value="organizer">Organizers</option>
           </select>
 
+          <select
+            value={houseFilter}
+            onChange={(e) => setHouseFilter(e.target.value)}
+            className="bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-[#BA170D] focus:outline-none"
+          >
+            <option value="all">All Houses</option>
+            <option value="Red">Red House</option>
+            <option value="Blue">Blue House</option>
+            <option value="Yellow">Yellow House</option>
+            <option value="Green">Green House</option>
+          </select>
+
           <button
             onClick={handleDeleteAllUsers}
             className="flex items-center gap-2 bg-red-900/50 hover:bg-red-900 text-red-200 px-4 py-2 rounded-lg transition-colors border border-red-800"
@@ -242,9 +312,23 @@ export default function UserManagement() {
         <table className="w-full text-left border-collapse">
           <thead className="bg-white/5 text-gray-400 text-xs uppercase tracking-wider font-bold">
             <tr>
-              <th className="p-4">User</th>
+              <th
+                className="p-4 cursor-pointer hover:text-white transition-colors"
+                onClick={() => handleSort("name")}
+              >
+                User{" "}
+                {sortConfig.key === "name" &&
+                  (sortConfig.direction === "asc" ? "↑" : "↓")}
+              </th>
               <th className="p-4">ID</th>
-              <th className="p-4">Chest No</th>
+              <th
+                className="p-4 cursor-pointer hover:text-white transition-colors"
+                onClick={() => handleSort("chestNo")}
+              >
+                Chest No{" "}
+                {sortConfig.key === "chestNo" &&
+                  (sortConfig.direction === "asc" ? "↑" : "↓")}
+              </th>
               <th className="p-4">Details</th>
               <th className="p-4">Contact</th>
               <th className="p-4 text-center">Events</th>
