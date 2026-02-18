@@ -6,7 +6,7 @@ import { Search, Download, Shield, User as UserIcon } from "lucide-react";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
 import ConfirmToast from "@/components/ConfirmToast";
-import { Trash2, AlertTriangle, Wrench } from "lucide-react";
+import { Trash2, AlertTriangle } from "lucide-react";
 
 import Toast, { ToastType } from "@/components/ui/Toast";
 
@@ -164,34 +164,6 @@ export default function UserManagement() {
       console.error(error);
       showToast("Failed to update role", "error");
       loadData();
-    }
-  };
-
-  const handleCleanUser = async (uid: string, name: string) => {
-    const eventTitle = prompt(
-      `Enter Event Title to force-remove from ${name}'s data (e.g., MIME):`,
-    );
-    if (!eventTitle) return;
-
-    if (
-      !confirm(
-        `Are you sure you want to remove "${eventTitle}" from ${name}? This is a destructive data fix.`,
-      )
-    )
-      return;
-
-    try {
-      const { cleanUserRegistration } = await import("@/lib/adminService");
-      const res = await cleanUserRegistration(uid, eventTitle);
-      if (res.success) {
-        showToast(res.message || "Fixed!", "success");
-        loadData();
-      } else {
-        showToast(res.message || "Failed", "error");
-      }
-    } catch (e) {
-      console.error(e);
-      showToast("Error", "error");
     }
   };
 
@@ -437,13 +409,6 @@ export default function UserManagement() {
                   </select>
                 </td>
                 <td className="p-4 text-center">
-                  <button
-                    onClick={() => handleCleanUser(user.uid, user.name)}
-                    className="p-2 text-gray-500 hover:text-yellow-500 hover:bg-yellow-500/10 rounded-lg transition-colors mr-2"
-                    title="Fix Data (Force Remove Event)"
-                  >
-                    <Wrench size={16} />
-                  </button>
                   <button
                     onClick={() => handleDeleteUser(user.uid, user.name)}
                     className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
