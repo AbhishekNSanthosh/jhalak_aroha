@@ -110,7 +110,7 @@ const getEventTheme = (title: string) => {
     color: "text-purple-400",
     bg: "bg-purple-400/10",
     border: "border-purple-400/20",
-  };
+    };
 };
 
 const HOUSES = ["Red", "Blue", "Yellow", "Green"];
@@ -215,31 +215,66 @@ export default function ProfilePage() {
     e.preventDefault();
     if (!auth || !db || !user) return;
 
-    // Validate all fields are present
-    if (
-      !formData.name ||
-      !formData.department ||
-      !formData.semester ||
-      !formData.house ||
-      !formData.mobile ||
-      !formData.collegeId
-    ) {
-      showToast(
-        "Please fill in all fields including Mobile and College ID.",
-        "error",
-      );
+    // 1. Validate Name
+    if (!formData.name.trim()) {
+      showToast("Please enter your full name.", "error");
       return;
     }
 
-    // Validate College ID Format: CMA/22/CS/033
-    // Regex explanation:
-    // ^CMA\/ - Starts with CMA/
-    // \d{2}\/ - 2 digits (Year) then /
-    // [A-Z]{2,3}\/ - 2 or 3 uppercase letters (Dept) then /
-    // \d{3}$ - 3 digits (RollNo) then end
-    const collegeIdRegex = /^CMA\/\d{2}\/[A-Z]{2,3}\/\d{3}$/;
-    if (!collegeIdRegex.test(formData.collegeId)) {
-      showToast("Invalid College ID. Expected: CMA/22/CS/033", "error");
+    // 2. Validate Mobile
+    // Assuming format is "+91 XXXXXXXXXX" (length 14) or just 10 digits if user edited it extensively
+    // Simple check: Must have at least 10 digits
+    const mobileDigits = formData.mobile.replace(/\D/g, "");
+    if (mobileDigits.length < 12) { // 91 + 10 digits
+      showToast("Please enter a valid 10-digit mobile number.", "error");
+      return;
+    }
+
+    // 3. Validate Dropdowns
+    if (!formData.department) {
+      showToast("Please select your department.", "error");
+      return;
+    }
+    if (!formData.semester) {
+      showToast("Please select your semester.", "error");
+      return;
+    }
+    if (!formData.house) {
+      showToast("Please select your house.", "error");
+      return;
+    }
+
+    // 4. Validate College ID Granularly
+    if (!formData.collegeId) {
+      showToast("Please enter your College ID.", "error");
+      return;
+    }
+
+    const parts = formData.collegeId.split('/');
+    if (parts.length !== 4) {
+      showToast("Incomplete College ID. Expected format: PREFIX/YY/DEPT/ROLL (e.g., LCMA/22/CIVIL/033)", "error");
+      return;
+    }
+
+    const [prefix, year, dept, roll] = parts;
+
+    if (!/^[A-Z]{3,4}$/.test(prefix)) {
+      showToast("Invalid College ID Prefix. Must be 3 or 4 uppercase letters (e.g., CMA, LCMA).", "error");
+      return;
+    }
+
+    if (!/^\d{2}$/.test(year)) {
+      showToast("Invalid Year in College ID. Must be 2 digits (e.g., 22).", "error");
+      return;
+    }
+
+    if (!/^[A-Z]{2,6}$/.test(dept)) {
+      showToast("Invalid Department Code in College ID. Must be 2-6 uppercase letters (e.g., CS, CIVIL).", "error");
+      return;
+    }
+
+    if (!/^\d{3}$/.test(roll)) {
+      showToast("Invalid Roll Number in College ID. Must be 3 digits (e.g., 033).", "error");
       return;
     }
 
@@ -314,13 +349,29 @@ export default function ProfilePage() {
     const cleaned = val.replace(/[^A-Z0-9]/g, "");
     let formatted = "";
 
-    if (cleaned.length > 0) formatted += cleaned.substring(0, 3);
-    if (cleaned.length > 3) formatted += "/" + cleaned.substring(3, 5);
-    if (cleaned.length > 5) {
-      const remaining = cleaned.substring(5);
+    // Determine prefix length (3 or 4) based on 4th character
+    // If 4th char is a letter, assume 4-letter prefix (ABCD/...)
+    // If 4th char is a digit, assume 3-letter prefix (ABC/...)
+    let prefixLength = 3;
+    if (cleaned.length >= 4) {
+      if (/[A-Z]/.test(cleaned[3])) {
+        prefixLength = 4;
+      }
+    }
+
+    if (cleaned.length > 0) formatted += cleaned.substring(0, prefixLength);
+    
+    if (cleaned.length > prefixLength) {
+       formatted += "/" + cleaned.substring(prefixLength, prefixLength + 2);
+    }
+
+    if (cleaned.length > prefixLength + 2) {
+      const remaining = cleaned.substring(prefixLength + 2);
+      // Try to intelligently split Department and Roll No if possible
+      // Dept is usually 2 or 3 letters
       const match = remaining.match(/^([A-Z]*)(.*)$/);
       if (match) {
-        formatted += "/" + match[1];
+        if (match[1]) formatted += "/" + match[1];
         if (match[2]) formatted += "/" + match[2];
       }
     }
@@ -459,7 +510,7 @@ export default function ProfilePage() {
                     required
                   />
                   <p className="text-xs text-gray-500 mt-1 ml-1">
-                    Format: CMA/YY/DEPT/XXX
+                    Format: ABC/YY/DEPT/XXX or ABCD/YY/DEPT/XXX
                   </p>
                 </div>
 
