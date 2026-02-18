@@ -68,12 +68,15 @@ export const validateRegistrationRules = (
     const finalTeamEvents = existingTeamEvents.map(t => t.eventTitle);
     if (newTeamEventTitle) finalTeamEvents.push(newTeamEventTitle);
 
+    // Filter out duplicates (user should not be able to double-register anyway)
+    const allEventTitles = Array.from(new Set([...finalSoloEvents, ...finalTeamEvents]));
+
     let offStageCount = 0;
     let onStageIndCount = 0;
     let onStageGroupCount = 0;
     const datesMap: Record<string, string[]> = {};
 
-    const processEvent = (title: string) => {
+    allEventTitles.forEach((title) => {
         const event = getEventDetails(title);
         if (!event) return;
 
@@ -87,17 +90,11 @@ export const validateRegistrationRules = (
             }
         }
 
-        // Rule: Only 1 event per day for events with dates
         if (event.date) {
             if (!datesMap[event.date]) datesMap[event.date] = [];
-            if (!datesMap[event.date].includes(event.title)) {
-                datesMap[event.date].push(event.title);
-            }
+            datesMap[event.date].push(event.title);
         }
-    };
-
-    if (finalSoloEvents) finalSoloEvents.forEach(processEvent);
-    finalTeamEvents.forEach(processEvent);
+    });
 
     // Validate 1 event per day rule
     for (const [date, events] of Object.entries(datesMap)) {
@@ -212,6 +209,7 @@ export const createTeam = async (
             const memberChestNoUpdates: { [uid: string]: string } = {};
             const finalMemberChestNos: { [uid: string]: string } = {};
             const regDocsMap: { [uid: string]: any } = {};
+            let leaderHouse: string | null = null;
 
             for (const uid of uniqueMemberIds) {
                 const userDocRef = doc(firestore, "users", uid);
@@ -222,8 +220,15 @@ export const createTeam = async (
                 }
 
                 const userData = userDoc.data();
-                if (!userData.name || !userData.department || !userData.collegeId || !userData.mobile) {
-                    throw new Error(`Profile incomplete for ${userData.name || uid}.`);
+                if (!userData.name || !userData.department || !userData.collegeId || !userData.mobile || !userData.house) {
+                    throw new Error(`Profile incomplete for ${userData.name || uid}. Please ensure house and mobile are updated.`);
+                }
+
+                // Capture leader's house or validate member's house matches leader's
+                if (uid === leaderUid) {
+                    leaderHouse = userData.house;
+                } else if (leaderHouse && userData.house !== leaderHouse) {
+                    throw new Error(`House Mismatch: All team members must belong to the same house. ${userData.name} belongs to ${userData.house} while you belong to ${leaderHouse}.`);
                 }
 
                 if (userData.chestNo) {
@@ -370,6 +375,11 @@ export const updateUserSoloRegistrations = async (uid: string, newEvents: string
             for (const eventTitle of added) {
                 const status = await checkRegistrationStatus(eventTitle);
                 if (status.isClosed) throw new Error(`Registration closed for ${eventTitle}.`);
+
+                // Extra check: Is it already a team event?
+                if (currentTeamEvents.includes(eventTitle)) {
+                    throw new Error(`Already registered for ${eventTitle} in a team.`);
+                }
             }
 
             const mockTeamRegs = currentTeamEvents.map(t => ({ eventTitle: t } as TeamRegistration));
@@ -490,4 +500,8 @@ export const leaveTeam = async (uid: string, teamId: string): Promise<{ success:
 
 export const toggleSoloEvent = async (uid: string, eventTitle: string, isSelected: boolean): Promise<{ success: boolean; message?: string }> => {
     return { success: false, message: "Use batch update" };
+};
+export const getMyRegistrations = async (userId: string) => {
+    const registrations = await fetchUserRegistrations(userId);
+    return registrations;
 };

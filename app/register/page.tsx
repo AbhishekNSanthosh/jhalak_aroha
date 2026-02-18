@@ -379,6 +379,20 @@ export default function RegisterPage() {
                           !!teamReg && teamReg.leaderId !== user?.uid;
                         const isClosed = eventSettings[event.title] || false;
 
+                        // Calculate if registration should be disabled based on limits
+                        let isDisabled = false;
+                        if (!isSelected) {
+                          if (event.categoryType === 'off_stage' && counts.offStage >= 4) {
+                            isDisabled = true;
+                          } else if (event.categoryType === 'on_stage' || event.categoryType === 'flagship') {
+                            if (event.eventType === 'individual' && counts.onStageInd >= 3) {
+                              isDisabled = true;
+                            } else if (event.eventType === 'group' && counts.onStageGroup >= 2) {
+                              isDisabled = true;
+                            }
+                          }
+                        }
+
                         return (
                           <EventRegistrationCard
                             key={event.title}
@@ -386,6 +400,7 @@ export default function RegisterPage() {
                             isSelected={isSelected}
                             isLocked={isLocked}
                             isRegistrationClosed={isClosed}
+                            isDisabled={isDisabled}
                             teamDetails={teamReg}
                             onToggle={() => handleToggleSolo(event)} // Handles local state
                             onCreateTeam={(members: any[]) =>
