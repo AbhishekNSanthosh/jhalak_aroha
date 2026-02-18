@@ -290,7 +290,7 @@ export default function RegisterPage() {
           </h1>
 
           {/* Updated Status Display with 3 counters */}
-          <div className="flex flex-wrap gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
             {[
               {
                 label: "Off-Stage",
@@ -313,18 +313,18 @@ export default function RegisterPage() {
             ].map((p, i) => (
               <div
                 key={i}
-                className="flex items-center gap-4 bg-white/5 border border-white/10 p-4 rounded-xl min-w-[140px]"
+                className="flex items-center justify-between sm:justify-start gap-4 bg-white/5 border border-white/10 p-4 rounded-2xl backdrop-blur-md"
               >
-                <span className="text-gray-400 uppercase tracking-[0.2em] text-[9px] font-black">
+                <span className="text-gray-500 uppercase tracking-[0.2em] text-[10px] font-black">
                   {p.label}
                 </span>
-                <div className="flex items-baseline gap-1">
+                <div className="flex items-baseline gap-1.5">
                   <span
-                    className={`text-2xl font-black font-unbounded ${p.color} tracking-tighter`}
+                    className={`text-2xl md:text-3xl font-black font-unbounded ${p.color} tracking-tighter`}
                   >
                     {p.count}
                   </span>
-                  <span className="text-white/20 text-xs font-bold">
+                  <span className="text-white/20 text-xs font-bold font-unbounded">
                     / {p.max}
                   </span>
                 </div>
@@ -348,7 +348,22 @@ export default function RegisterPage() {
                     ? Array.from({ length: 6 }).map((_, i) => (
                         <EventCardSkeleton key={i} />
                       ))
-                    : cat.items.map((event) => {
+                    : cat.items
+                      .filter((event) => {
+                        const isSelected =
+                          pendingSoloEvents.includes(event.title) ||
+                          registrations.teamEvents.some(
+                            (t) => t.eventTitle === event.title,
+                          );
+                        const isClosed = eventSettings[event.title] || false;
+                        return isSelected || !isClosed;
+                      })
+                      .sort((a, b) => {
+                        const dateA = a.date ? new Date(a.date).getTime() : Infinity;
+                        const dateB = b.date ? new Date(b.date).getTime() : Infinity;
+                        return dateA - dateB;
+                      })
+                      .map((event) => {
                         // Check local pending state
                         const isSoloRegistered = pendingSoloEvents.includes(
                           event.title,
@@ -373,7 +388,7 @@ export default function RegisterPage() {
                             isRegistrationClosed={isClosed}
                             teamDetails={teamReg}
                             onToggle={() => handleToggleSolo(event)} // Handles local state
-                            onCreateTeam={(members) =>
+                            onCreateTeam={(members: any[]) =>
                               handleCreateTeam(event, members)
                             }
                             onLeaveTeam={async () => {

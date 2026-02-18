@@ -71,6 +71,7 @@ export const validateRegistrationRules = (
     let offStageCount = 0;
     let onStageIndCount = 0;
     let onStageGroupCount = 0;
+    const datesMap: Record<string, string[]> = {};
 
     const processEvent = (title: string) => {
         const event = getEventDetails(title);
@@ -85,10 +86,29 @@ export const validateRegistrationRules = (
                 onStageGroupCount++;
             }
         }
+
+        // Rule: Only 1 event per day for events with dates
+        if (event.date) {
+            if (!datesMap[event.date]) datesMap[event.date] = [];
+            // Basic deduplication in case the same list has the same title twice
+            if (!datesMap[event.date].includes(event.title)) {
+                datesMap[event.date].push(event.title);
+            }
+        }
     };
 
     if (finalSoloEvents) finalSoloEvents.forEach(processEvent);
     finalTeamEvents.forEach(processEvent);
+
+    // Validate 1 event per day rule
+    for (const [date, events] of Object.entries(datesMap)) {
+        if (events.length > 1) {
+            return {
+                valid: false,
+                message: `You can only register for 1 event per day. Conflict on ${date}: ${events.join(", ")}`
+            };
+        }
+    }
 
     if (offStageCount > 4) return { valid: false, message: `Maximum 4 Off-Stage events allowed. You selected ${offStageCount}.` };
     if (onStageIndCount > 3) return { valid: false, message: `Maximum 3 Individual On-Stage events allowed. You selected ${onStageIndCount}.` };

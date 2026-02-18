@@ -12,6 +12,7 @@ export interface EventItem {
     eventType: 'individual' | 'group';
     categoryType: 'on_stage' | 'off_stage' | 'flagship';
     shortCode?: string;
+    date?: string;
 }
 
 
@@ -590,7 +591,8 @@ export const categories: Category[] = [
                 gradient: "from-blue-800 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'ESS_EN'
+                shortCode: 'ESS_EN',
+                date: '18 Feb 2026'
             },
 
             {
@@ -611,7 +613,8 @@ export const categories: Category[] = [
                 gradient: "from-blue-700 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'ESS_ML'
+                shortCode: 'ESS_ML',
+                date: '20 Feb 2026'
             },
 
             {
@@ -632,7 +635,8 @@ export const categories: Category[] = [
                 gradient: "from-blue-600 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'ESS_HI'
+                shortCode: 'ESS_HI',
+                date: '25 Feb 2026'
             },
 
             {
@@ -653,7 +657,8 @@ export const categories: Category[] = [
                 gradient: "from-purple-800 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'STRY_EN'
+                shortCode: 'STRY_EN',
+                date: '20 Feb 2026'
             },
 
             {
@@ -674,7 +679,8 @@ export const categories: Category[] = [
                 gradient: "from-purple-700 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'STRY_ML'
+                shortCode: 'STRY_ML',
+                date: '18 Feb 2026'
             },
 
             {
@@ -695,7 +701,8 @@ export const categories: Category[] = [
                 gradient: "from-purple-600 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'STRY_HI'
+                shortCode: 'STRY_HI',
+                date: '21 Feb 2026'
             },
 
             {
@@ -715,7 +722,8 @@ export const categories: Category[] = [
                 gradient: "from-green-800 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'POEM_EN'
+                shortCode: 'POEM_EN',
+                date: '19 Feb 2026'
             },
 
             {
@@ -735,7 +743,8 @@ export const categories: Category[] = [
                 gradient: "from-green-700 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'POEM_ML'
+                shortCode: 'POEM_ML',
+                date: '21 Feb 2026'
             },
 
             {
@@ -755,7 +764,8 @@ export const categories: Category[] = [
                 gradient: "from-green-600 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'POEM_HI'
+                shortCode: 'POEM_HI',
+                date: '25 Feb 2026'
             },
 
             {
@@ -775,7 +785,8 @@ export const categories: Category[] = [
                 gradient: "from-gray-800 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'PENC'
+                shortCode: 'PENC',
+                date: '18 Feb 2026'
             },
 
             {
@@ -795,7 +806,8 @@ export const categories: Category[] = [
                 gradient: "from-cyan-800 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'WATC'
+                shortCode: 'WATC',
+                date: '19 Feb 2026'
             },
             {
                 title: "Glass Painting",
@@ -812,7 +824,8 @@ export const categories: Category[] = [
                 gradient: "from-pink-800 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'GLAS'
+                shortCode: 'GLAS',
+                date: '20 Feb 2026'
             },
 
             {
@@ -831,7 +844,8 @@ export const categories: Category[] = [
                 gradient: "from-purple-800 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'POST'
+                shortCode: 'POST',
+                date: '20 Feb 2026'
             },
 
             {
@@ -850,7 +864,8 @@ export const categories: Category[] = [
                 gradient: "from-red-800 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'COLL'
+                shortCode: 'COLL',
+                date: '21 Feb 2026'
             },
 
             {
@@ -868,7 +883,8 @@ export const categories: Category[] = [
                 gradient: "from-indigo-700 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'CALL'
+                shortCode: 'CALL',
+                date: '25 Feb 2026'
             },
 
             {
@@ -888,7 +904,8 @@ export const categories: Category[] = [
                 gradient: "from-orange-700 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'CART'
+                shortCode: 'CART',
+                date: '25 Feb 2026'
             },
 
             {
@@ -905,7 +922,8 @@ export const categories: Category[] = [
                 gradient: "from-teal-700 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'EXTM_EN'
+                shortCode: 'EXTM_EN',
+                date: '18 Feb 2026'
             },
 
             {
@@ -922,7 +940,8 @@ export const categories: Category[] = [
                 gradient: "from-teal-600 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'EXTM_ML'
+                shortCode: 'EXTM_ML',
+                date: '19 Feb 2026'
             },
 
             {
@@ -939,7 +958,8 @@ export const categories: Category[] = [
                 gradient: "from-teal-500 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'EXTM_HI'
+                shortCode: 'EXTM_HI',
+                date: '20 Feb 2026'
             },
 
             {
@@ -995,7 +1015,8 @@ export const categories: Category[] = [
                 gradient: "from-lime-700 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'ARTW'
+                shortCode: 'ARTW',
+                date: '21 Feb 2026'
             },
 
             {
@@ -1014,7 +1035,8 @@ export const categories: Category[] = [
                 gradient: "from-amber-700 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'LOGO'
+                shortCode: 'LOGO',
+                date: '25 Feb 2026'
             },
 
             {
@@ -1034,7 +1056,8 @@ export const categories: Category[] = [
                 gradient: "from-emerald-700 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'CAPT'
+                shortCode: 'CAPT',
+                date: '25 Feb 2026'
             },
 
             {
@@ -1055,7 +1078,8 @@ export const categories: Category[] = [
                 gradient: "from-fuchsia-700 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'FACE'
+                shortCode: 'FACE',
+                date: '19 Feb 2026'
             },
 
             {
@@ -1073,7 +1097,8 @@ export const categories: Category[] = [
                 gradient: "from-rose-600 to-black",
                 eventType: 'individual',
                 categoryType: 'off_stage',
-                shortCode: 'MEHN'
+                shortCode: 'MEHN',
+                date: '21 Feb 2026'
             },
 
             {
