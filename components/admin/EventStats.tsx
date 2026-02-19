@@ -12,6 +12,7 @@ import {
   Eye,
   Power,
 } from "lucide-react";
+import ExportOptionsModal from "./ExportOptionsModal";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
 import ConfirmToast from "@/components/ConfirmToast";
@@ -30,6 +31,24 @@ export default function EventStats({ user }: { user: User | null }) {
     "all",
   );
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [selectedEventForExport, setSelectedEventForExport] =
+    useState<EventStat | null>(null);
+
+  const ALL_EXPORT_FIELDS = [
+    "Chest No",
+    "Individual Chest No",
+    "Type",
+    "Role",
+    "Name",
+    "College ID",
+    "Email",
+    "Mobile",
+    "Department",
+    "Semester",
+    "House",
+    "Registered At",
+  ];
 
   useEffect(() => {
     const checkRole = async () => {
@@ -53,8 +72,17 @@ export default function EventStats({ user }: { user: User | null }) {
     setLoading(false);
   };
 
-  const handleExportEvent = async (eventStat: EventStat) => {
+  const handleExportClick = (eventStat: EventStat) => {
+    setSelectedEventForExport(eventStat);
+    setIsExportModalOpen(true);
+  };
+
+  const processExport = async (selectedFields: string[]) => {
+    if (!selectedEventForExport) return;
+    const eventStat = selectedEventForExport;
+
     setLoading(true);
+    setIsExportModalOpen(false);
     try {
       const allUsers = await fetchAllUsersWithData();
       const userMap = new Map(allUsers.map((u) => [u.uid, u]));
@@ -64,7 +92,7 @@ export default function EventStats({ user }: { user: User | null }) {
       for (const reg of eventStat.registrations) {
         if (reg.type === "individual") {
           const user = userMap.get(reg.userId);
-          exportRows.push({
+          const fullRow = {
             "Chest No": reg.userChestNo || reg.chestNo || "-",
             "Individual Chest No": reg.userChestNo || "-",
             Type: "Individual",
@@ -79,12 +107,13 @@ export default function EventStats({ user }: { user: User | null }) {
             "Registered At": reg.registeredAt
               ? new Date(reg.registeredAt.seconds * 1000).toLocaleString()
               : "-",
-          });
+          };
+          exportRows.push(fullRow);
         } else if (reg.type === "team") {
           const leader = userMap.get(reg.leaderId);
 
           // Add Leader Row
-          exportRows.push({
+          const leaderRow = {
             "Chest No": reg.teamChestNo || reg.chestNo || "-",
             "Individual Chest No": reg.leaderChestNo || "-",
             Type: "Team",
@@ -99,7 +128,8 @@ export default function EventStats({ user }: { user: User | null }) {
             "Registered At": reg.registeredAt
               ? new Date(reg.registeredAt.seconds * 1000).toLocaleString()
               : "-",
-          });
+          };
+          exportRows.push(leaderRow);
 
           // Add Member Rows
           if (reg.memberIds && Array.isArray(reg.memberIds)) {
@@ -112,7 +142,7 @@ export default function EventStats({ user }: { user: User | null }) {
                   ? reg.memberChestNos[memberId]
                   : "-";
 
-              exportRows.push({
+              const memberRow = {
                 "Chest No": reg.teamChestNo || reg.chestNo || "-",
                 "Individual Chest No": indChestNo,
                 Type: "Team",
@@ -127,38 +157,47 @@ export default function EventStats({ user }: { user: User | null }) {
                 "Registered At": reg.registeredAt
                   ? new Date(reg.registeredAt.seconds * 1000).toLocaleString()
                   : "-",
-              });
+              };
+              exportRows.push(memberRow);
             }
           }
         }
       }
 
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(exportRows);
+      // Filter fields
+      const finalRows = exportRows.map((row) => {
+        const filtered: any = {};
+        selectedFields.forEach((field) => {
+          // @ts-ignore
+          filtered[field] = row[field];
+        });
+        return filtered;
+      });
 
-      const wscols = [
-        { wch: 10 }, // Chest No
-        { wch: 10 }, // Individual Chest No
-        { wch: 10 }, // Type
-        { wch: 12 }, // Role
-        { wch: 20 }, // Name
-        { wch: 15 }, // College ID
-        { wch: 25 }, // Email
-        { wch: 12 }, // Mobile
-        { wch: 10 }, // Dept
-        { wch: 5 }, // Sem
-        { wch: 10 }, // House
-        { wch: 20 }, // Reg At
-      ];
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(finalRows);
+
+      // Auto-width for selected columns
+      const wscols = selectedFields.map((field) => {
+        // @ts-ignore
+        const maxLen = Math.max(
+          field.length,
+          // @ts-ignore
+          ...finalRows.map((r) => String(r[field] || "").length),
+        );
+        return { wch: Math.min(Math.max(maxLen + 2, 10), 50) };
+      });
       ws["!cols"] = wscols;
 
       XLSX.utils.book_append_sheet(wb, ws, eventStat.shortCode);
       XLSX.writeFile(wb, `jhalak_${eventStat.shortCode}_participants.xlsx`);
+      toast.success("Export successful!");
     } catch (error) {
       console.error("Export failed:", error);
       toast.error("Export failed. See console for details.");
     } finally {
       setLoading(false);
+      setSelectedEventForExport(null);
     }
   };
 
@@ -333,7 +372,7 @@ export default function EventStats({ user }: { user: User | null }) {
                     <Eye size={14} /> VIEW
                   </button>
                   <button
-                    onClick={() => handleExportEvent(stat)}
+                    onClick={() => handleExportClick(stat)}
                     disabled={stat.entryCount === 0}
                     className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold border transition-colors ${
                       stat.entryCount === 0
@@ -387,6 +426,13 @@ export default function EventStats({ user }: { user: User | null }) {
           <div className="p-10 text-center text-gray-500">No events found.</div>
         )}
       </div>
+
+      <ExportOptionsModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        onExport={processExport}
+        allFields={ALL_EXPORT_FIELDS}
+      />
     </div>
   );
 }
