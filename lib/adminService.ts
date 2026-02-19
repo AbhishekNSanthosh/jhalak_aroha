@@ -1,5 +1,5 @@
 import { db } from "@/lib/firebase";
-import { collection, getDocs, QuerySnapshot, DocumentData, doc, setDoc, query, where, writeBatch, arrayRemove } from "firebase/firestore";
+import { collection, getDocs, QuerySnapshot, DocumentData, doc, setDoc, query, where, writeBatch, arrayRemove, runTransaction, serverTimestamp, getDoc, deleteDoc, arrayUnion } from "firebase/firestore";
 import { UserProfile } from "@/data/constant";
 
 
@@ -518,5 +518,248 @@ export const cleanUserRegistration = async (uid: string, eventTitle: string): Pr
     } catch (error: any) {
         console.error("Error cleaning user reg:", error);
         return { success: false, message: error.message };
+    }
+};
+
+// 10. Admin Add User to Event
+export const adminAddUserToEvent = async (eventTitle: string, userEmail: string): Promise<{ success: boolean; message?: string }> => {
+    if (!db) return { success: false, message: "Database not initialized" };
+    const firestore = db;
+
+    try {
+        // 1. Find User by Email
+        const usersRef = collection(firestore, "users");
+        const q = query(usersRef, where("email", "==", userEmail));
+        const userSnap = await getDocs(q);
+
+        if (userSnap.empty) {
+            return { success: false, message: "User not found with this email." };
+        }
+
+        const userDoc = userSnap.docs[0];
+        const uid = userDoc.id;
+        const userData = userDoc.data();
+
+
+        // 2. Check if already registered
+        const regRef = doc(firestore, "registrations", uid);
+        const regDoc = await getDoc(regRef);
+        let currentEvents: string[] = [];
+        let currentTeamEvents: string[] = [];
+
+        if (regDoc.exists()) {
+            const data = regDoc.data();
+            currentEvents = data.events || [];
+            currentTeamEvents = data.teamEvents || [];
+        }
+
+        if (currentEvents.includes(eventTitle) || currentTeamEvents.includes(eventTitle)) {
+            return { success: false, message: "User is already registered for this event." };
+        }
+
+        // --- Validation Logic ---
+        const allItems = categories.flatMap((cat: any) => cat.items);
+        const eventItem = allItems.find((item: any) => item.title === eventTitle);
+
+        if (!eventItem) return { success: false, message: "Event definition not found." };
+
+        let offStageCount = 0;
+        let onStageIndCount = 0;
+        let onStageGroupCount = 0;
+        const datesMap: Record<string, string[]> = {};
+
+        const processEvent = (title: string) => {
+            const ev = allItems.find((item: any) => item.title === title);
+            if (!ev) return;
+
+            if (ev.categoryType === 'off_stage') {
+                offStageCount++;
+            } else if (ev.categoryType === 'on_stage' || ev.categoryType === 'flagship') {
+                if (ev.eventType === 'individual') {
+                    onStageIndCount++;
+                } else {
+                    onStageGroupCount++;
+                }
+            }
+
+            if (ev.date) {
+                if (!datesMap[ev.date]) datesMap[ev.date] = [];
+                datesMap[ev.date].push(ev.title);
+            }
+        };
+
+        // Check existing + new
+        currentEvents.forEach(processEvent);
+        currentTeamEvents.forEach(processEvent);
+        processEvent(eventTitle);
+
+        if (offStageCount > 4) return { success: false, message: `Limit Reached: Max 4 Off-Stage events.` };
+        if (onStageIndCount > 3) return { success: false, message: `Limit Reached: Max 3 Individual On-Stage events.` };
+        if (onStageGroupCount > 2) return { success: false, message: `Limit Reached: Max 2 Group events.` };
+
+        for (const [date, events] of Object.entries(datesMap)) {
+            if (events.length > 1) {
+                return { success: false, message: `Schedule Conflict: User has ${events[0]} on ${date}.` };
+            }
+        }
+
+        // 3. Register User (Transaction to handle chest no & counters)
+        return await runTransaction(firestore, async (transaction) => {
+            // Check Chest Number
+            let userChestNo = userData.chestNo || null;
+            const globalCounterRef = doc(firestore, "counters", "user_chest_numbers");
+            let currentGlobalCount = 0;
+
+            if (!userChestNo) {
+                const globalCounterDoc = await transaction.get(globalCounterRef);
+                currentGlobalCount = globalCounterDoc.exists() ? (globalCounterDoc.data().count || 0) : 0;
+
+                // Find next available chest no
+                let isUnique = false;
+                while (!isUnique) {
+                    currentGlobalCount++;
+                    const candidate = (100 + currentGlobalCount).toString().padStart(3, '0');
+                    // Check if taken in users
+                    const userQuery = query(collection(firestore, "users"), where("chestNo", "==", candidate));
+                    const querySnap = await getDocs(userQuery);
+
+                    // Check lock table
+                    const chestNoLockRef = doc(firestore, "taken_chest_numbers", candidate);
+                    const chestNoLockDoc = await transaction.get(chestNoLockRef);
+
+                    if (querySnap.empty && !chestNoLockDoc.exists()) {
+                        userChestNo = candidate;
+                        isUnique = true;
+                    }
+                }
+
+                // Reserve it
+                transaction.set(globalCounterRef, { count: currentGlobalCount }, { merge: true });
+                transaction.update(userDoc.ref, { chestNo: userChestNo });
+
+                const chestNoLockRef = doc(firestore, "taken_chest_numbers", userChestNo);
+                transaction.set(chestNoLockRef, { uid, createdAt: serverTimestamp() });
+            }
+
+            // Create Event Registration ID
+            const regId = `${eventTitle.replace(/\s+/g, '_')}_${uid}`;
+            const eventRegRef = doc(firestore, "event_registrations", regId);
+
+            transaction.set(eventRegRef, {
+                type: 'individual',
+                userId: uid,
+                userChestNo: userChestNo,
+                eventTitle: eventTitle,
+                registeredAt: serverTimestamp(),
+                chestNo: userChestNo // Redundancy for easy access
+            });
+
+            // Update User Registrations
+            transaction.set(regRef, {
+                userId: uid,
+                events: arrayUnion(eventTitle),
+                lastUpdated: serverTimestamp()
+            }, { merge: true });
+
+            return { success: true, message: `User added successfully. Chest No: ${userChestNo}` };
+        });
+
+    } catch (error: any) {
+        console.error("Admin add user error:", error);
+        return { success: false, message: error.message || "Failed to add user." };
+    }
+};
+
+// 11. Admin Remove User From Event
+export const adminRemoveUserFromEvent = async (eventTitle: string, registrationId: string, uid: string, type: string): Promise<{ success: boolean; message?: string }> => {
+    if (!db) return { success: false, message: "Database not initialized" };
+    const firestore = db;
+
+    try {
+        if (type === 'individual') {
+            const batch = writeBatch(firestore);
+
+            // Delete event registration
+            const regRef = doc(firestore, "event_registrations", registrationId);
+            batch.delete(regRef);
+
+            // Remove from user profile
+            const userRegRef = doc(firestore, "registrations", uid);
+            batch.update(userRegRef, {
+                events: arrayRemove(eventTitle)
+            });
+
+            await batch.commit();
+            return { success: true, message: "User removed from event." };
+        } else {
+            // Team Logic - Handling Removal of Team Members or Disbanding Team
+            const teamRegRef = doc(firestore, "event_registrations", registrationId);
+            const teamRegSnap = await getDoc(teamRegRef);
+
+            if (!teamRegSnap.exists()) return { success: false, message: "Registration not found" };
+            const data = teamRegSnap.data();
+
+            if (data.leaderId === uid) {
+                // Leader -> Disband Team
+                const batch = writeBatch(firestore);
+
+                // Delete Reg Doc
+                batch.delete(teamRegRef);
+
+                // Delete Team Doc
+                if (data.teamId) {
+                    batch.delete(doc(firestore, "teams", data.teamId));
+                }
+
+                // Remove event from Leader
+                batch.update(doc(firestore, "registrations", uid), {
+                    teamEvents: arrayRemove(eventTitle)
+                });
+
+                // Update all members
+                if (data.memberIds && Array.isArray(data.memberIds)) {
+                    data.memberIds.forEach((mid: string) => {
+                        if (mid === uid) return;
+                        const mRegRef = doc(firestore, "registrations", mid);
+                        batch.update(mRegRef, {
+                            teamEvents: arrayRemove(eventTitle)
+                        });
+                    });
+                }
+
+                await batch.commit();
+                return { success: true, message: "Team disbanded and removed." };
+
+            } else {
+                // Member -> Remove from team
+                const batch = writeBatch(firestore);
+
+                // Update Event Reg
+                batch.update(teamRegRef, {
+                    memberIds: arrayRemove(uid)
+                });
+
+                // Update Team Doc
+                if (data.teamId) {
+                    const teamRef = doc(firestore, "teams", data.teamId);
+                    batch.update(teamRef, {
+                        memberIds: arrayRemove(uid)
+                    });
+                }
+
+                // Update User Reg
+                const userRegRef = doc(firestore, "registrations", uid);
+                batch.update(userRegRef, {
+                    teamEvents: arrayRemove(eventTitle)
+                });
+
+                await batch.commit();
+                return { success: true, message: "Member removed from team." };
+            }
+        }
+
+    } catch (error: any) {
+        console.error("Remove user error:", error);
+        return { success: false, message: error.message || "Failed to remove user." };
     }
 };

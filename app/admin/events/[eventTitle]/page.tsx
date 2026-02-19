@@ -17,9 +17,19 @@ import {
   Calendar,
   User,
   Crown,
+  Trash2,
+  Plus,
+  X,
+  AlertTriangle,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
+import ConfirmToast from "@/components/ConfirmToast";
+import ExportOptionsModal from "@/components/admin/ExportOptionsModal";
+import {
+  adminAddUserToEvent,
+  adminRemoveUserFromEvent,
+} from "@/lib/adminService";
 
 export default function EventDetailedView() {
   const params = useParams();
@@ -35,6 +45,14 @@ export default function EventDetailedView() {
     "chestNo",
   );
   const [selectedHouse, setSelectedHouse] = useState<string | null>(null);
+
+  // New State for Export
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+
+  // New State for Add User
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [addingUser, setAddingUser] = useState(false);
 
   const houses = [
     {
@@ -76,13 +94,85 @@ export default function EventDetailedView() {
     setLoading(false);
   };
 
-  const handleExport = () => {
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUserEmail.trim()) return;
+
+    setAddingUser(true);
+    const result = await adminAddUserToEvent(eventTitle, newUserEmail.trim());
+    if (result.success) {
+      toast.success(result.message || "User added to event!");
+      setIsAddUserModalOpen(false);
+      setNewUserEmail("");
+      loadData();
+    } else {
+      toast.error(result.message || "Failed to add user.");
+    }
+    setAddingUser(false);
+  };
+
+  const handleRemoveUser = (
+    regId: string,
+    uid: string,
+    type: string,
+    name: string,
+  ) => {
+    toast.custom(
+      (t) => (
+        <ConfirmToast
+          t={t}
+          message={`Are you sure you want to remove ${name} from this event?\n\n${
+            type !== "individual"
+              ? "⚠️ If this user is a TEAM LEADER, the entire team will be disbanded."
+              : ""
+          }`}
+          onConfirm={async () => {
+            const result = await adminRemoveUserFromEvent(
+              eventTitle,
+              regId,
+              uid,
+              type,
+            );
+            if (result.success) {
+              toast.success(result.message || "Removed successfully");
+              loadData();
+            } else {
+              toast.error(result.message || "Failed to remove");
+            }
+          }}
+        />
+      ),
+      { duration: Infinity },
+    );
+  };
+
+  const handleExportClick = () => {
+    if (registrations.length === 0) return;
+    setIsExportModalOpen(true);
+  };
+
+  const allExportFields = [
+    "Type",
+    "Team Name",
+    "Chest No (Main)",
+    "Individual Chest No",
+    "Role",
+    "Name",
+    "College ID",
+    "Email",
+    "Mobile",
+    "House",
+    "Department",
+    "Registered At",
+  ];
+
+  const handleExportConfirm = (selectedFields: string[]) => {
     if (registrations.length === 0) return;
 
     const rows: any[] = [];
     registrations.forEach((reg) => {
-      // Main Participant/Leader Row
-      rows.push({
+      // Data object for Main Participant/Leader
+      const mainData: any = {
         Type: reg.type.toUpperCase(),
         "Team Name": reg.teamName || "-",
         "Chest No (Main)": reg.chestNo,
@@ -98,12 +188,21 @@ export default function EventDetailedView() {
         "Registered At": reg.registeredAt
           ? new Date(reg.registeredAt.seconds * 1000).toLocaleString()
           : "-",
+      };
+
+      // Filter mainData based on selectedFields
+      const filteredMainRow: any = {};
+      selectedFields.forEach((field) => {
+        if (mainData[field] !== undefined) {
+          filteredMainRow[field] = mainData[field];
+        }
       });
+      rows.push(filteredMainRow);
 
       // Member Rows
       if (reg.members && reg.members.length > 0) {
         reg.members.forEach((member) => {
-          rows.push({
+          const memberData: any = {
             Type: "TEAM MEMBER",
             "Team Name": reg.teamName || "-",
             "Chest No (Main)": reg.chestNo,
@@ -116,17 +215,37 @@ export default function EventDetailedView() {
             House: member.house,
             Department: member.department,
             "Registered At": "-",
+          };
+
+          const filteredMemberRow: any = {};
+          selectedFields.forEach((field) => {
+            if (memberData[field] !== undefined) {
+              filteredMemberRow[field] = memberData[field];
+            }
           });
+          rows.push(filteredMemberRow);
         });
       }
     });
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(rows);
+
+    // Auto-adjust column widths
+    const colWidths = selectedFields.map((key) => {
+      const maxContentLength = Math.max(
+        key.length,
+        ...rows.map((row) => (row[key] ? row[key].toString().length : 0)),
+      );
+      return { wch: maxContentLength + 2 };
+    });
+    ws["!cols"] = colWidths;
+
     const safeTitle = eventTitle.replace(/[^a-z0-9]/gi, "_").substring(0, 30);
     XLSX.utils.book_append_sheet(wb, ws, "Participants");
     XLSX.writeFile(wb, `jhalak_${safeTitle}_detailed.xlsx`);
     toast.success("Excel exported!");
+    setIsExportModalOpen(false);
   };
 
   const filteredRegs = registrations.filter((reg) => {
@@ -256,13 +375,21 @@ export default function EventDetailedView() {
             </div>
           </div>
 
-          <button
-            onClick={handleExport}
-            disabled={registrations.length === 0}
-            className="flex items-center gap-2 bg-white text-black hover:bg-[#BA170D] hover:text-white px-6 py-3 rounded-full transition-all font-bold text-xs uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Download size={16} /> Export Excel
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setIsAddUserModalOpen(true)}
+              className="flex items-center gap-2 bg-[#BA170D] text-white hover:bg-[#a0140b] px-6 py-3 rounded-full transition-all font-bold text-xs uppercase tracking-wider"
+            >
+              <Plus size={16} /> Add User
+            </button>
+            <button
+              onClick={handleExportClick}
+              disabled={registrations.length === 0}
+              className="flex items-center gap-2 bg-white text-black hover:bg-[#BA170D] hover:text-white px-6 py-3 rounded-full transition-all font-bold text-xs uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download size={16} /> Export Excel
+            </button>
+          </div>
         </div>
       </div>
 
@@ -448,8 +575,8 @@ export default function EventDetailedView() {
                     </div>
                   </div>
 
-                  {/* Meta / Date */}
-                  <div className="text-right space-y-2">
+                  {/* Meta / Date & Actions */}
+                  <div className="text-right space-y-2 flex flex-col items-end">
                     <div className="text-[10px] font-bold uppercase tracking-widest text-[#BA170D] bg-[#BA170D]/5 px-2 py-1 rounded inline-block">
                       {reg.type} Entry
                     </div>
@@ -461,6 +588,16 @@ export default function EventDetailedView() {
                           ).toLocaleDateString()
                         : "-"}
                     </div>
+
+                    <button
+                      onClick={() =>
+                        handleRemoveUser(reg.id, reg.uid, reg.type, reg.name)
+                      }
+                      className="text-gray-500 hover:text-red-500 transition-colors p-1"
+                      title="Remove from Event"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
 
@@ -474,8 +611,26 @@ export default function EventDetailedView() {
                       {reg.members.map((member, i) => (
                         <div
                           key={i}
-                          className="flex flex-col p-3 rounded-lg bg-black/40 border border-white/5 hover:border-white/10 transition-colors gap-2"
+                          className="flex flex-col p-3 rounded-lg bg-black/40 border border-white/5 hover:border-white/10 transition-colors gap-2 relative group-member"
                         >
+                          {/* Remove Member Button */}
+                          <div className="absolute top-2 right-2 opacity-0 group-[.group-member]:hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveUser(
+                                  reg.id,
+                                  member.uid,
+                                  "team",
+                                  member.name,
+                                );
+                              }}
+                              className="text-gray-600 hover:text-red-500 transition-colors"
+                              title="Remove Member"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
                           <div className="flex items-center justify-between">
                             <div className="space-y-1">
                               <p className="text-sm font-bold text-gray-300 truncate">
@@ -540,6 +695,70 @@ export default function EventDetailedView() {
           </p>
         </div>
       )}
+
+      {/* Add User Modal */}
+      {isAddUserModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-neutral-900 border border-white/10 rounded-xl w-full max-w-md shadow-2xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white font-unbounded">
+                Add User to Event
+              </h3>
+              <button
+                onClick={() => setIsAddUserModalOpen(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddUser} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-gray-400">
+                  User Email
+                </label>
+                <input
+                  type="email"
+                  placeholder="Enter user email..."
+                  value={newUserEmail}
+                  onChange={(e) => setNewUserEmail(e.target.value)}
+                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-[#BA170D] focus:outline-none transition-colors"
+                  autoFocus
+                  required
+                />
+                <p className="text-xs text-gray-500">
+                  Note: The user must already be logged in to the system.
+                </p>
+              </div>
+
+              <div className="pt-2 flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsAddUserModalOpen(false)}
+                  className="px-4 py-2 rounded-lg text-sm font-bold text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addingUser || !newUserEmail.trim()}
+                  className="px-6 py-2 rounded-lg text-sm font-bold text-white bg-[#BA170D] hover:bg-[#a0140b] shadow-lg shadow-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {addingUser ? "Adding..." : "Add User"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Export Options Modal */}
+      <ExportOptionsModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        onExport={handleExportConfirm}
+        allFields={allExportFields}
+      />
     </div>
   );
 }
