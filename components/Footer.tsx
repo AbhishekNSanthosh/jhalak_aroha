@@ -333,8 +333,13 @@ export default function Footer() {
           </button>
 
           <span className="order-3">
-            Made with <span className="text-[#BA170D] animate-pulse">♥</span> by
-            404
+            Made with <span className="text-[#BA170D] animate-pulse">♥</span> by{" "}
+            <Link
+              href="/tech-team"
+              className="font-bold hover:text-[#BA170D] transition-colors underline decoration-[#BA170D] decoration-2 underline-offset-4"
+            >
+              Tech Team
+            </Link>
           </span>
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import gsap from "gsap";
 
 export default function SplashScreen({
@@ -11,127 +12,183 @@ export default function SplashScreen({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const logoRef = useRef<HTMLDivElement>(null);
-  const glowRef = useRef<HTMLDivElement>(null);
-  const shimmerRef = useRef<HTMLDivElement>(null);
-  const [isMounted, setIsMounted] = useState(true);
+  const textTitleRef = useRef<HTMLDivElement>(null);
+  const textSubtitleRef = useRef<HTMLDivElement>(null);
+  const progressContainerRef = useRef<HTMLDivElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const creditsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({
-        onComplete: () => {
-          setIsMounted(false);
-          onComplete();
-        },
+        onComplete: onComplete,
       });
 
-      // Initial States
-      gsap.set(logoRef.current, {
-        scale: 0.5,
-        opacity: 0,
-        filter: "blur(20px)",
-      });
-      gsap.set(glowRef.current, { scale: 0.5, opacity: 0 });
-      gsap.set(shimmerRef.current, { xPercent: -100 });
+      // 1. Initial State
+      gsap.set(containerRef.current, { clipPath: "inset(0% 0% 0% 0%)" });
 
-      // Animation Sequence
-      tl
-        // 1. Reveal Logo & Glow
-        .to(logoRef.current, {
+      // Glitch/Flash Logo Input
+      tl.fromTo(
+        logoRef.current,
+        { scale: 2, opacity: 0, filter: "blur(20px)" },
+        {
           scale: 1,
           opacity: 1,
           filter: "blur(0px)",
-          duration: 1.2,
+          duration: 1,
           ease: "expo.out",
-        })
-        .to(
-          glowRef.current,
-          {
-            scale: 1.5,
-            opacity: 0.6,
-            duration: 1.5,
-            ease: "power2.out",
-          },
-          "<",
-        )
-        // 2. Shimmer Effect
-        .to(
-          shimmerRef.current,
-          {
-            xPercent: 100,
-            duration: 0.8,
-            ease: "power2.inOut",
-          },
-          "-=0.5",
-        )
-        // 3. Pulse / Hold
+        },
+      )
+        // Jitter/Shake Effect
         .to(
           logoRef.current,
           {
-            scale: 1.05,
-            duration: 1.5,
-            ease: "sine.inOut",
+            x: 5,
+            y: -5,
+            duration: 0.05,
+            repeat: 5,
             yoyo: true,
-            repeat: 1,
+            ease: "none",
+            onComplete: () => {
+              gsap.set(logoRef.current, { x: 0, y: 0 });
+            },
           },
           "-=0.5",
         )
-        // 4. Exit
-        .to(logoRef.current, {
-          scale: 0.8,
-          opacity: 0,
-          filter: "blur(10px)",
-          duration: 0.8,
-          ease: "power3.in",
-        })
-        .to(
-          glowRef.current,
+
+        // Text Reveal
+        .fromTo(
+          textTitleRef.current,
+          { opacity: 0, scale: 1.5, text: "" }, // Requires TextPlugin, but standard GSAP can do scale/opacity
           {
-            opacity: 0,
-            duration: 0.5,
+            opacity: 1,
+            scale: 1,
+            duration: 0.8,
+            ease: "back.out(1.7)",
           },
-          "<",
-        )
-        .to(containerRef.current, {
-          yPercent: -100,
+          "-=0.2",
+        );
+
+      // Subtitle Reveal
+      tl.fromTo(
+        textSubtitleRef.current,
+        { opacity: 0, letterSpacing: "2em" },
+        { opacity: 1, letterSpacing: "0.8em", duration: 0.8 },
+        "-=0.4",
+      ).fromTo(
+        creditsRef.current,
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" },
+        "-=0.6",
+      );
+
+      // 3. Progress Bar Animation
+      tl.fromTo(
+        progressBarRef.current,
+        { scaleX: 0 },
+        {
+          scaleX: 1,
+          duration: 1.5,
+          ease: "expo.inOut",
+          transformOrigin: "left center",
+        },
+        "<", // start with text reveal
+      );
+
+      // 4. Exit Sequence
+      tl.to(
+        [
+          logoRef.current,
+          textTitleRef.current,
+          textSubtitleRef.current,
+          progressContainerRef.current,
+          creditsRef.current,
+        ],
+        {
+          y: -50,
+          opacity: 0,
+          duration: 0.6,
+          ease: "power2.in",
+          stagger: 0.1,
+        },
+        "+=0.2",
+      ).to(
+        containerRef.current,
+        {
+          clipPath: "inset(0% 0% 100% 0%)", // Wipes up
           duration: 0.8,
           ease: "expo.inOut",
-        });
+        },
+        "-=0.2",
+      );
     }, containerRef);
 
     return () => ctx.revert();
   }, [onComplete]);
 
-  if (!isMounted) return null;
-
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0A0A0A] overflow-hidden"
+      className="fixed inset-0 z-[100] bg-[#000000] flex flex-col items-center justify-center text-center pointer-events-auto"
     >
-      {/* Background Glow */}
-      <div
-        ref={glowRef}
-        className="absolute w-[500px] h-[500px] bg-[#BA170D]/20 rounded-full blur-[100px] pointer-events-none"
-      />
+      {/* Background Texture/Gradient */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black via-[#050505] to-[#0A0A0A] pointer-events-none"></div>
 
-      {/* Decorative Particles (Static CSS for performance) */}
-      <div className="absolute inset-0 opacity-20 pointer-events-none bg-[url('/noise.svg')] mix-blend-overlay"></div>
+      {/* Main Content */}
+      <div className="relative z-10 flex flex-col items-center">
+        {/* Logo */}
+        <div ref={logoRef} className="relative w-32 h-32 md:w-48 md:h-48 mb-8">
+          {/* Glow behind logo */}
+          <div className="absolute inset-0 bg-[#BA170D] rounded-full blur-[80px] opacity-20 animate-pulse"></div>
+          <Image
+            src="/Logo.png"
+            alt="Jhalak Aroha"
+            fill
+            className="object-contain drop-shadow-2xl"
+            priority
+          />
+        </div>
 
-      {/* Logo Container */}
-      <div ref={logoRef} className="relative w-64 h-64 md:w-96 md:h-96 z-10">
-        <Image
-          src="/Logo.png"
-          alt="Jhalak Aroha Logo"
-          fill
-          className="object-contain drop-shadow-[0_0_25px_rgba(186,23,13,0.5)]"
-          priority
-        />
+        {/* Text */}
+        <h1
+          ref={textTitleRef}
+          className="text-4xl md:text-7xl font-cinzel font-black text-white mb-2"
+        >
+          AROHA
+        </h1>
+        <p
+          ref={textSubtitleRef}
+          className="text-[#BA170D] font-geist-mono text-xs md:text-sm tracking-[0.8em] uppercase mb-12"
+        >
+          JHALAK 2026
+        </p>
 
-        {/* Shimmer Overlay (Masked by parent if needed, but here simple overlay) */}
+        {/* Progress Bar */}
         <div
-          ref={shimmerRef}
-          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 pointer-events-none mix-blend-overlay"
-        ></div>
+          ref={progressContainerRef}
+          className="w-64 h-[2px] bg-white/10 rounded-full overflow-hidden relative"
+        >
+          <div
+            ref={progressBarRef}
+            className="absolute inset-0 bg-[#BA170D] w-full h-full origin-left"
+          ></div>
+        </div>
+      </div>
+
+      {/* Credits */}
+      <div
+        ref={creditsRef}
+        className="absolute bottom-8 left-0 right-0 text-center z-20 opacity-0"
+      >
+        <p className="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest font-mono">
+          Crafted with <span className="text-white mx-1">♥</span> by{" "}
+          <Link
+            href="/tech-team"
+            className="text-[#BA170D] font-bold animate-pulse ml-1 hover:underline z-50 cursor-pointer relative"
+          >
+            Tech Team
+          </Link>
+        </p>
       </div>
     </div>
   );
