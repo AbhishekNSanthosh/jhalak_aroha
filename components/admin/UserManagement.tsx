@@ -15,8 +15,8 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<
-    "all" | "admin" | "user" | "organizer"
-  >("all"); // Add organizer type
+    "all" | "admin" | "user" | "organizer" | "moderator"
+  >("all");
   const [houseFilter, setHouseFilter] = useState<string>("all");
   const [sortConfig, setSortConfig] = useState<{
     key: keyof AdminUserView | "chestNo";
@@ -367,6 +367,7 @@ export default function UserManagement() {
             <option value="all">All Roles</option>
             <option value="user">Users</option>
             <option value="admin">Admins</option>
+            <option value="moderator">Moderators</option>
             <option value="organizer">Organizers</option>
           </select>
 
@@ -519,7 +520,11 @@ export default function UserManagement() {
                     className={`bg-transparent border rounded px-2 py-1 text-xs font-bold focus:outline-none focus:border-white/50 cursor-pointer ${
                       user.role === "admin"
                         ? "text-[#BA170D] border-[#BA170D]/30"
-                        : "text-gray-400 border-white/10"
+                        : user.role === "moderator"
+                          ? "text-purple-400 border-purple-400/30"
+                          : user.role === "organizer"
+                            ? "text-blue-400 border-blue-400/30"
+                            : "text-gray-400 border-white/10"
                     }`}
                   >
                     <option value="user" className="text-black">
@@ -527,6 +532,9 @@ export default function UserManagement() {
                     </option>
                     <option value="admin" className="text-black">
                       ADMIN
+                    </option>
+                    <option value="moderator" className="text-black">
+                      MODERATOR
                     </option>
                     <option value="organizer" className="text-black">
                       ORGANIZER

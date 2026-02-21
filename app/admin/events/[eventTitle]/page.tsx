@@ -2,6 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { auth, db } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 import {
   DetailedRegistration,
   fetchDetailedEventRegistrations,
@@ -64,6 +67,10 @@ export default function EventDetailedView() {
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
 
+  // Role-based access
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const canManageUsers = userRole === "admin" || userRole === "moderator";
+
   // Export
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
@@ -112,6 +119,17 @@ export default function EventDetailedView() {
   useEffect(() => {
     if (eventTitle) loadData();
   }, [eventTitle]);
+
+  // Fetch current user role
+  useEffect(() => {
+    if (!auth || !db) return;
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) return;
+      const snap = await getDoc(doc(db!, "users", user.uid));
+      if (snap.exists()) setUserRole(snap.data().role ?? "user");
+    });
+    return () => unsub();
+  }, []);
 
   const loadData = async () => {
     setLoading(true);
@@ -596,12 +614,14 @@ export default function EventDetailedView() {
           </div>
 
           <div className="flex gap-3 flex-wrap">
-            <button
-              onClick={() => setIsAddUserModalOpen(true)}
-              className="flex items-center gap-2 bg-[#BA170D] text-white hover:bg-[#a0140b] px-6 py-3 rounded-full transition-all font-bold text-xs uppercase tracking-wider"
-            >
-              <Plus size={16} /> Add User
-            </button>
+            {canManageUsers && (
+              <button
+                onClick={() => setIsAddUserModalOpen(true)}
+                className="flex items-center gap-2 bg-[#BA170D] text-white hover:bg-[#a0140b] px-6 py-3 rounded-full transition-all font-bold text-xs uppercase tracking-wider"
+              >
+                <Plus size={16} /> Add User
+              </button>
+            )}
             <button
               onClick={handleExportClick}
               disabled={registrations.length === 0}
@@ -932,15 +952,17 @@ export default function EventDetailedView() {
                           ).toLocaleDateString()
                         : "-"}
                     </div>
-                    <button
-                      onClick={() =>
-                        handleRemoveUser(reg.id, reg.uid, reg.type, reg.name)
-                      }
-                      className="text-gray-500 hover:text-red-500 transition-colors p-1"
-                      title="Remove from Event"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    {userRole === "admin" && (
+                      <button
+                        onClick={() =>
+                          handleRemoveUser(reg.id, reg.uid, reg.type, reg.name)
+                        }
+                        className="text-gray-500 hover:text-red-500 transition-colors p-1"
+                        title="Remove from Event"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -956,23 +978,25 @@ export default function EventDetailedView() {
                           key={i}
                           className="flex flex-col p-3 rounded-lg bg-black/40 border border-white/5 hover:border-white/10 transition-colors gap-2 relative group/member"
                         >
-                          <div className="absolute top-2 right-2 opacity-0 group-hover/member:opacity-100 transition-opacity">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveUser(
-                                  reg.id,
-                                  member.uid,
-                                  "team",
-                                  member.name,
-                                );
-                              }}
-                              className="text-gray-600 hover:text-red-500 transition-colors"
-                              title="Remove Member"
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
+                          {userRole === "admin" && (
+                            <div className="absolute top-2 right-2 opacity-0 group-hover/member:opacity-100 transition-opacity">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveUser(
+                                    reg.id,
+                                    member.uid,
+                                    "team",
+                                    member.name,
+                                  );
+                                }}
+                                className="text-gray-600 hover:text-red-500 transition-colors"
+                                title="Remove Member"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          )}
                           <div className="flex items-center justify-between">
                             <div className="space-y-1">
                               <p className="text-sm font-bold text-gray-300 truncate">

@@ -36,7 +36,7 @@ export interface UserProfile {
     chestNo?: string; // User's unique chest number
     createdAt?: string;
     updatedAt?: string;
-    role?: 'user' | 'organizer' | 'admin';
+    role?: 'user' | 'organizer' | 'moderator' | 'admin';
 }
 
 export const isProfileComplete = (profile: any): boolean => {

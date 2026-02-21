@@ -38,13 +38,27 @@ export default function AdminLayout({
         const userDoc = await getDoc(doc(firestore, "users", user.uid));
         if (userDoc.exists()) {
           const userData = userDoc.data();
-          if (userData.role === "admin" || userData.role === "organizer") {
+          if (
+            userData.role === "admin" ||
+            userData.role === "organizer" ||
+            userData.role === "moderator"
+          ) {
             setIsAdmin(true);
             setUserRole(userData.role);
 
-            // Redirect Organizer if trying to access restricted pages
+            // Redirect organizer away from admin-only pages
             if (
               userData.role === "organizer" &&
+              (pathname === "/admin" ||
+                pathname.startsWith("/admin/users") ||
+                pathname.startsWith("/admin/results"))
+            ) {
+              router.replace("/admin/events");
+            }
+
+            // Redirect moderator away from admin-only pages
+            if (
+              userData.role === "moderator" &&
               (pathname === "/admin" || pathname.startsWith("/admin/users"))
             ) {
               router.replace("/admin/events");
@@ -120,16 +134,18 @@ export default function AdminLayout({
         Event Stats
       </button>
 
-      <button
-        onClick={() => router.push("/admin/results")}
-        className={`w-full text-left px-4 py-3 rounded-xl border font-bold text-sm tracking-wide transition-colors ${
-          pathname.startsWith("/admin/results")
-            ? "bg-[#BA170D]/10 text-[#BA170D] border-[#BA170D]/20"
-            : "border-transparent text-gray-400 hover:bg-white/5 hover:text-white"
-        }`}
-      >
-        Results
-      </button>
+      {(userRole === "admin" || userRole === "moderator") && (
+        <button
+          onClick={() => router.push("/admin/results")}
+          className={`w-full text-left px-4 py-3 rounded-xl border font-bold text-sm tracking-wide transition-colors ${
+            pathname.startsWith("/admin/results")
+              ? "bg-[#BA170D]/10 text-[#BA170D] border-[#BA170D]/20"
+              : "border-transparent text-gray-400 hover:bg-white/5 hover:text-white"
+          }`}
+        >
+          Results
+        </button>
+      )}
 
       <div className="pt-4 mt-4 border-t border-white/10">
         <button

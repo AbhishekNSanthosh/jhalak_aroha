@@ -371,7 +371,9 @@ export default function EventStats({ user }: { user: User | null }) {
               <th className="p-4">Type</th>
               <th className="p-4 text-center">Entries</th>
               <th className="p-4 text-center">Participants</th>
-              <th className="p-4 text-center">Reg. Status</th>
+              {(userRole === "admin" || userRole === "moderator") && (
+                <th className="p-4 text-center">Reg. Status</th>
+              )}
               <th className="p-4 text-right">Actions</th>
             </tr>
           </thead>
@@ -408,38 +410,42 @@ export default function EventStats({ user }: { user: User | null }) {
                 <td className="p-4 text-center font-mono text-white">
                   {stat.participantCount}
                 </td>
-                <td className="p-4 text-center">
-                  {userRole === "admin" && (
-                    <button
-                      onClick={async () => {
-                        const { toggleEventRegistration } =
-                          await import("@/lib/adminService");
-                        const res = await toggleEventRegistration(
-                          stat.title,
-                          stat.isRegistrationClosed,
-                        );
-                        if (res.success) {
-                          toast.success(res.message || "Status updated");
-                          loadData();
-                        } else {
-                          toast.error(res.message || "Failed to update status");
+                {(userRole === "admin" || userRole === "moderator") && (
+                  <td className="p-4 text-center">
+                    {(userRole === "admin" || userRole === "moderator") && (
+                      <button
+                        onClick={async () => {
+                          const { toggleEventRegistration } =
+                            await import("@/lib/adminService");
+                          const res = await toggleEventRegistration(
+                            stat.title,
+                            stat.isRegistrationClosed,
+                          );
+                          if (res.success) {
+                            toast.success(res.message || "Status updated");
+                            loadData();
+                          } else {
+                            toast.error(
+                              res.message || "Failed to update status",
+                            );
+                          }
+                        }}
+                        className={`p-2 rounded-full transition-all ${
+                          stat.isRegistrationClosed
+                            ? "bg-gray-800 text-gray-500 hover:text-red-500"
+                            : "bg-green-500/10 text-green-500 hover:bg-green-500/20"
+                        }`}
+                        title={
+                          stat.isRegistrationClosed
+                            ? "Registration Closed - Click to Open"
+                            : "Registration Open - Click to Close"
                         }
-                      }}
-                      className={`p-2 rounded-full transition-all ${
-                        stat.isRegistrationClosed
-                          ? "bg-gray-800 text-gray-500 hover:text-red-500"
-                          : "bg-green-500/10 text-green-500 hover:bg-green-500/20"
-                      }`}
-                      title={
-                        stat.isRegistrationClosed
-                          ? "Registration Closed - Click to Open"
-                          : "Registration Open - Click to Close"
-                      }
-                    >
-                      <Power size={18} />
-                    </button>
-                  )}
-                </td>
+                      >
+                        <Power size={18} />
+                      </button>
+                    )}
+                  </td>
+                )}
                 <td className="p-4 text-right">
                   <button
                     onClick={() =>
