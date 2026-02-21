@@ -16,14 +16,12 @@ export default function ExportOptionsModal({
 }: ExportOptionsModalProps) {
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
 
-  // Initialize selected fields when modal opens
+  // Initialize with all fields selected when modal opens
   useEffect(() => {
-    if (isOpen) {
-      setSelectedFields(allFields);
-    }
+    if (isOpen) setSelectedFields(allFields);
   }, [isOpen, allFields]);
 
-  // Lock scroll when modal is open
+  // Lock scroll when open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -32,7 +30,6 @@ export default function ExportOptionsModal({
       document.body.style.overflow = "unset";
       document.documentElement.style.overflow = "unset";
     }
-
     return () => {
       document.body.style.overflow = "unset";
       document.documentElement.style.overflow = "unset";
@@ -45,14 +42,6 @@ export default function ExportOptionsModal({
     );
   };
 
-  const handleSelectAll = () => {
-    setSelectedFields(allFields);
-  };
-
-  const handleDeselectAll = () => {
-    setSelectedFields([]);
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -60,8 +49,9 @@ export default function ExportOptionsModal({
       data-lenis-prevent
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
     >
-      <div className="bg-neutral-900 border border-white/10 rounded-xl w-full max-w-lg shadow-2xl animate-in fade-in zoom-in duration-200">
-        <div className="flex items-center justify-between p-6 border-b border-white/10">
+      <div className="bg-neutral-900 border border-white/10 rounded-xl w-full max-w-xl shadow-2xl animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-white/10 flex-shrink-0">
           <h2 className="text-xl font-bold text-white font-unbounded">
             Export Options
           </h2>
@@ -73,61 +63,71 @@ export default function ExportOptionsModal({
           </button>
         </div>
 
-        <div className="p-6">
+        {/* Scrollable body */}
+        <div className="p-6 overflow-y-auto flex-1">
           <p className="text-gray-400 mb-4 text-sm">
             Select the fields you want to include in the export file.
           </p>
 
-          <div className="flex gap-3 mb-4">
+          {/* Select / Deselect + count */}
+          <div className="flex items-center gap-3 mb-5">
             <button
-              onClick={handleSelectAll}
+              onClick={() => setSelectedFields(allFields)}
               className="text-xs font-bold text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-wider"
             >
               Select All
             </button>
             <span className="text-gray-600">|</span>
             <button
-              onClick={handleDeselectAll}
+              onClick={() => setSelectedFields([])}
               className="text-xs font-bold text-gray-500 hover:text-gray-300 transition-colors uppercase tracking-wider"
             >
               Deselect All
             </button>
+            <span className="ml-auto text-[11px] text-gray-500 font-mono">
+              {selectedFields.length} / {allFields.length} selected
+            </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-            {allFields.map((field) => (
-              <label
-                key={field}
-                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                  selectedFields.includes(field)
-                    ? "bg-[#BA170D]/10 border-[#BA170D] text-white"
-                    : "bg-white/5 border-white/5 text-gray-400 hover:bg-white/10"
-                }`}
-              >
-                <div
-                  className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${
-                    selectedFields.includes(field)
-                      ? "bg-[#BA170D] border-[#BA170D]"
-                      : "border-gray-500 bg-transparent"
+          {/* All fields — no height cap so every field is always visible */}
+          <div className="grid grid-cols-2 gap-3">
+            {allFields.map((field) => {
+              const isSelected = selectedFields.includes(field);
+              return (
+                <label
+                  key={field}
+                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                    isSelected
+                      ? "bg-[#BA170D]/10 border-[#BA170D] text-white"
+                      : "bg-white/5 border-white/5 text-gray-400 hover:bg-white/10 hover:border-white/20"
                   }`}
                 >
-                  {selectedFields.includes(field) && (
-                    <Check size={14} className="text-white" />
-                  )}
-                </div>
-                <input
-                  type="checkbox"
-                  className="hidden"
-                  checked={selectedFields.includes(field)}
-                  onChange={() => toggleField(field)}
-                />
-                <span className="text-sm font-medium">{field}</span>
-              </label>
-            ))}
+                  <div
+                    className={`w-5 h-5 rounded flex items-center justify-center border transition-colors flex-shrink-0 ${
+                      isSelected
+                        ? "bg-[#BA170D] border-[#BA170D]"
+                        : "border-gray-500 bg-transparent"
+                    }`}
+                  >
+                    {isSelected && <Check size={14} className="text-white" />}
+                  </div>
+                  <input
+                    type="checkbox"
+                    className="hidden"
+                    checked={isSelected}
+                    onChange={() => toggleField(field)}
+                  />
+                  <span className="text-sm font-medium leading-tight">
+                    {field}
+                  </span>
+                </label>
+              );
+            })}
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-white/10 bg-white/5 rounded-b-xl">
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 p-6 border-t border-white/10 bg-white/5 rounded-b-xl flex-shrink-0">
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-lg text-sm font-bold text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
@@ -143,7 +143,7 @@ export default function ExportOptionsModal({
                 : "bg-[#BA170D] hover:bg-[#a0140b] shadow-lg shadow-red-900/20"
             }`}
           >
-            Export Selected
+            Export ({selectedFields.length})
           </button>
         </div>
       </div>

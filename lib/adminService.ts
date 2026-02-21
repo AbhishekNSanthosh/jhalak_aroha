@@ -392,6 +392,10 @@ export interface DetailedRegistration {
     }[];
 
     registeredAt: any; // Timestamp
+
+    // Participation tracking
+    participated?: boolean;
+    participatedAt?: any;
 }
 
 // 8. Fetch Detailed Registrations for a Single Event
@@ -434,7 +438,9 @@ export const fetchDetailedEventRegistrations = async (eventTitle: string): Promi
                         department: user.department || "-",
                         semester: user.semester || "-",
                         house: user.house || "-",
-                        registeredAt: data.registeredAt
+                        registeredAt: data.registeredAt,
+                        participated: data.participated || false,
+                        participatedAt: data.participatedAt || null,
                     });
                 }
             } else if (data.type === 'team' && data.leaderId) {
@@ -478,7 +484,9 @@ export const fetchDetailedEventRegistrations = async (eventTitle: string): Promi
                         semester: leader.semester || "-",
                         house: leader.house || "-",
                         members: members,
-                        registeredAt: data.registeredAt
+                        registeredAt: data.registeredAt,
+                        participated: data.participated || false,
+                        participatedAt: data.participatedAt || null,
                     });
                 }
             }
@@ -761,5 +769,53 @@ export const adminRemoveUserFromEvent = async (eventTitle: string, registrationI
     } catch (error: any) {
         console.error("Remove user error:", error);
         return { success: false, message: error.message || "Failed to remove user." };
+    }
+};
+
+// 12. Mark / Unmark Participation for a single registration
+export const adminMarkParticipation = async (
+    registrationId: string,
+    participated: boolean
+): Promise<{ success: boolean; message?: string }> => {
+    if (!db) return { success: false, message: "Database not initialized" };
+    try {
+        const regRef = doc(db, "event_registrations", registrationId);
+        await setDoc(
+            regRef,
+            {
+                participated,
+                participatedAt: participated ? serverTimestamp() : null,
+            },
+            { merge: true }
+        );
+        return { success: true, message: participated ? "Marked as participated" : "Marked as not participated" };
+    } catch (error: any) {
+        console.error("Error marking participation:", error);
+        return { success: false, message: error.message || "Failed to update participation." };
+    }
+};
+
+// 13. Bulk Mark Participation for multiple registrations
+export const adminBulkMarkParticipation = async (
+    registrationIds: string[],
+    participated: boolean
+): Promise<{ success: boolean; message?: string }> => {
+    if (!db) return { success: false, message: "Database not initialized" };
+    if (registrationIds.length === 0) return { success: true, message: "Nothing to update." };
+    try {
+        const firestore = db;
+        const batch = writeBatch(firestore);
+        registrationIds.forEach((id) => {
+            const ref = doc(firestore, "event_registrations", id);
+            batch.set(ref, { participated, participatedAt: participated ? serverTimestamp() : null }, { merge: true });
+        });
+        await batch.commit();
+        return {
+            success: true,
+            message: `${participated ? "Marked" : "Cleared"} ${registrationIds.length} entries.`,
+        };
+    } catch (error: any) {
+        console.error("Error bulk marking participation:", error);
+        return { success: false, message: error.message || "Failed to bulk update." };
     }
 };

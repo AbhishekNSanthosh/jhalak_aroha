@@ -139,8 +139,133 @@ export default function UserManagement() {
 
   if (loading)
     return (
-      <div className="text-white text-center py-20 animate-pulse font-unbounded">
-        LOADING USER DATA...
+      <div className="space-y-6">
+        {/* Scanning progress bar */}
+        <div className="w-full h-[2px] bg-white/5 rounded-full overflow-hidden relative">
+          <div
+            className="absolute inset-y-0 w-1/3 rounded-full"
+            style={{
+              background:
+                "linear-gradient(90deg, transparent, #BA170D, transparent)",
+              animation: "userScan 1.4s ease-in-out infinite",
+            }}
+          />
+        </div>
+
+        {/* Header skeleton — mirrors the controls bar */}
+        <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white/5 p-4 rounded-xl border border-white/10">
+          <div className="h-9 w-72 rounded-lg bg-white/5 shimmer" />
+          <div className="flex gap-3">
+            {[96, 96, 40, 120].map((w, i) => (
+              <div
+                key={i}
+                className="h-9 rounded-lg bg-white/5 shimmer"
+                style={{ width: w }}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Table skeleton */}
+        <div className="overflow-x-auto rounded-xl border border-white/10">
+          {/* Table header */}
+          <div className="bg-white/5 grid grid-cols-8 gap-4 px-4 py-3 border-b border-white/10">
+            {[
+              "User",
+              "ID",
+              "Chest No",
+              "Details",
+              "Contact",
+              "Events",
+              "Role",
+              "Actions",
+            ].map((col) => (
+              <div key={col} className="h-3 rounded-full bg-white/10 shimmer" />
+            ))}
+          </div>
+
+          {/* Skeleton rows */}
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div
+              key={i}
+              className="grid grid-cols-8 gap-4 px-4 py-4 border-b border-white/5 items-center"
+              style={{ animationDelay: `${i * 60}ms` }}
+            >
+              {/* User cell — avatar + name/email */}
+              <div className="flex items-center gap-3 col-span-1">
+                <div
+                  className="w-8 h-8 rounded-full bg-white/5 shimmer flex-shrink-0"
+                  style={{ animationDelay: `${i * 60}ms` }}
+                />
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <div
+                    className="h-2.5 rounded-full bg-white/8 shimmer"
+                    style={{ width: "70%" }}
+                  />
+                  <div
+                    className="h-2 rounded-full bg-white/5 shimmer"
+                    style={{ width: "85%" }}
+                  />
+                </div>
+              </div>
+              {/* ID */}
+              <div
+                className="h-3 rounded-full bg-white/5 shimmer"
+                style={{ width: "60%" }}
+              />
+              {/* Chest no badge */}
+              <div className="h-6 w-14 rounded-full bg-[#BA170D]/10 shimmer" />
+              {/* Details — 3 lines */}
+              <div className="space-y-1.5">
+                {[70, 55, 45].map((w, j) => (
+                  <div
+                    key={j}
+                    className="h-2 rounded-full bg-white/5 shimmer"
+                    style={{ width: `${w}%` }}
+                  />
+                ))}
+              </div>
+              {/* Contact */}
+              <div
+                className="h-3 rounded-full bg-white/5 shimmer"
+                style={{ width: "65%" }}
+              />
+              {/* Events badge */}
+              <div className="h-6 w-8 rounded bg-white/8 shimmer mx-auto" />
+              {/* Role select */}
+              <div className="h-7 w-20 rounded bg-white/5 shimmer ml-auto" />
+              {/* Actions */}
+              <div className="h-7 w-7 rounded-lg bg-white/5 shimmer mx-auto" />
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom count line */}
+        <div className="flex justify-end">
+          <div className="h-3 w-28 rounded-full bg-white/5 shimmer" />
+        </div>
+
+        <style>{`
+          @keyframes userScan {
+            0%   { left: -33%; }
+            100% { left: 133%; }
+          }
+          .shimmer {
+            position: relative;
+            overflow: hidden;
+          }
+          .shimmer::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%);
+            animation: shimmerSlide 1.6s ease-in-out infinite;
+          }
+          @keyframes shimmerSlide {
+            0%   { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+          }
+        `}</style>
       </div>
     );
 

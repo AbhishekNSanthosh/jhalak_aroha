@@ -552,21 +552,21 @@ export const categories: Category[] = [
             },
 
             {
-                title: "Karnatic Music",
+                title: "Carnatic Music",
                 description: "Solo classical Carnatic vocal performance.",
                 tags: ["Solo", "Music", "Classical"],
                 minParticipants: 1,
                 maxParticipants: 1,
                 timeLimit: "5 minutes",
                 rules: [
-                    "Classical Karnatic compositions only",
+                    "Classical Carnatic compositions only",
                     "No film songs, fusion, light music, cinematic bhajans",
                     "Electronic shruti box/tambura apps allowed"
                 ],
                 gradient: "from-indigo-800 to-black",
                 eventType: 'individual',
                 categoryType: 'on_stage',
-                shortCode: 'KARN'
+                shortCode: 'CARN'
             }
         ]
     },

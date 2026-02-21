@@ -166,9 +166,9 @@ export default function EventStats({ user }: { user: User | null }) {
 
       // Filter fields
       const finalRows = exportRows.map((row) => {
-        const filtered: any = {};
+        const filtered: Record<string, string | number> = {};
         selectedFields.forEach((field) => {
-          // @ts-ignore
+          // @ts-expect-error - field dynamically checked
           filtered[field] = row[field];
         });
         return filtered;
@@ -177,12 +177,9 @@ export default function EventStats({ user }: { user: User | null }) {
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(finalRows);
 
-      // Auto-width for selected columns
       const wscols = selectedFields.map((field) => {
-        // @ts-ignore
         const maxLen = Math.max(
           field.length,
-          // @ts-ignore
           ...finalRows.map((r) => String(r[field] || "").length),
         );
         return { wch: Math.min(Math.max(maxLen + 2, 10), 50) };
@@ -211,8 +208,90 @@ export default function EventStats({ user }: { user: User | null }) {
 
   if (loading)
     return (
-      <div className="text-white text-center py-20 animate-pulse font-unbounded">
-        LOADING STATS...
+      <div className="space-y-6">
+        {/* Scanning progress bar */}
+        <div className="w-full h-[2px] bg-white/5 rounded-full overflow-hidden relative">
+          <div
+            className="absolute inset-y-0 w-1/3 rounded-full"
+            style={{
+              background:
+                "linear-gradient(90deg, transparent, #BA170D, transparent)",
+              animation: "eventScan 1.4s ease-in-out infinite",
+            }}
+          />
+        </div>
+
+        {/* Overview Cards Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="bg-white/5 p-6 rounded-xl border border-white/10 shimmer h-[104px]"
+            />
+          ))}
+        </div>
+
+        {/* Controls skeleton */}
+        <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white/5 p-4 rounded-xl border border-white/10">
+          <div className="h-9 w-full md:w-96 rounded-lg bg-white/5 shimmer" />
+          <div className="h-9 w-full md:w-32 rounded-lg bg-white/5 shimmer" />
+        </div>
+
+        {/* Table skeleton */}
+        <div className="overflow-x-auto rounded-xl border border-white/10">
+          <div className="bg-white/5 grid grid-cols-6 gap-4 px-4 py-3 border-b border-white/10">
+            {[
+              "Event",
+              "Type",
+              "Entries",
+              "Participants",
+              "Status",
+              "Actions",
+            ].map((col) => (
+              <div key={col} className="h-3 rounded-full bg-white/10 shimmer" />
+            ))}
+          </div>
+
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="grid grid-cols-6 gap-4 px-4 py-4 border-b border-white/5 items-center"
+              style={{ animationDelay: `${i * 60}ms` }}
+            >
+              <div className="space-y-2 col-span-1">
+                <div className="h-3 w-3/4 rounded-full bg-white/8 shimmer" />
+                <div className="h-2 w-1/2 rounded-full bg-white/5 shimmer" />
+              </div>
+              <div className="h-4 w-16 rounded-full bg-white/5 shimmer" />
+              <div className="h-4 w-8 rounded-full bg-white/5 shimmer mx-auto" />
+              <div className="h-4 w-8 rounded-full bg-white/5 shimmer mx-auto" />
+              <div className="h-8 w-8 rounded-full bg-white/5 shimmer mx-auto" />
+              <div className="h-9 w-24 rounded-lg bg-white/5 shimmer ml-auto" />
+            </div>
+          ))}
+        </div>
+
+        <style>{`
+          @keyframes eventScan {
+            0%   { left: -33%; }
+            100% { left: 133%; }
+          }
+          .shimmer {
+            position: relative;
+            overflow: hidden;
+          }
+          .shimmer::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%);
+            animation: shimmerSlide 1.6s ease-in-out infinite;
+          }
+          @keyframes shimmerSlide {
+            0%   { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+          }
+        `}</style>
       </div>
     );
 
@@ -271,7 +350,9 @@ export default function EventStats({ user }: { user: User | null }) {
         <div className="flex gap-3 w-full md:w-auto">
           <select
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as any)}
+            onChange={(e) =>
+              setTypeFilter(e.target.value as "all" | "individual" | "group")
+            }
             className="bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-[#BA170D] focus:outline-none"
           >
             <option value="all">All Types</option>
