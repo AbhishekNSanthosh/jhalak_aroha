@@ -4,6 +4,7 @@ import "./globals.css";
 import SmoothScroll from "@/components/SmoothScroll";
 import { Toaster } from "react-hot-toast";
 import ProfileGuard from "@/components/ProfileGuard";
+import NetworkGuard from "@/components/NetworkGuard";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -80,7 +81,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} antialiased`}
       >
         <SmoothScroll>
-          <ProfileGuard>{children}</ProfileGuard>
+          <NetworkGuard>
+            <ProfileGuard>{children}</ProfileGuard>
+          </NetworkGuard>
         </SmoothScroll>
 
         <Toaster position="top-right" />
