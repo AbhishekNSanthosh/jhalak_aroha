@@ -92,26 +92,6 @@ export interface SoloRegistration {
 
 export const categories: Category[] = [
     {
-        title: "Flagship Event",
-        items: [
-            {
-                title: "AROHA",
-                description: "The heartbeat of Jhalak. A fusion of rhythm, grace, and energy.",
-                image: "/dance.png",
-                tags: ["Main Stage"],
-                cols: "md:col-span-2 md:row-span-2",
-                gradient: "from-[#BA170D] to-black",
-                minParticipants: null,
-                maxParticipants: null,
-                timeLimit: null,
-                rules: [],
-                eventType: 'group',
-                categoryType: 'flagship',
-                shortCode: 'ARH'
-            }
-        ]
-    },
-    {
         title: "On-Stage Events",
         items: [
             {

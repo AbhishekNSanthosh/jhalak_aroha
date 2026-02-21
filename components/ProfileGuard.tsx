@@ -9,7 +9,14 @@ import { isProfileComplete } from "@/data/constant";
 import Image from "next/image";
 import gsap from "gsap";
 
-const PUBLIC_ROUTES = ["/", "/login", "/signup", "/privacy-policy", "/terms"];
+const PUBLIC_ROUTES = [
+  "/",
+  "/login",
+  "/signup",
+  "/privacy-policy",
+  "/terms",
+  "/results",
+];
 
 // ── Verifying Access Screen ─────────────────────────────────────────────────
 function VerifyingScreen() {

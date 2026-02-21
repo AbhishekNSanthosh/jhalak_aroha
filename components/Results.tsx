@@ -7,14 +7,12 @@ import {
   Crown,
   Medal,
   Award,
-  Home,
   User,
   BarChart2,
   Trophy,
   MinusCircle,
   TrendingUp,
   TrendingDown,
-  Star,
 } from "lucide-react";
 import {
   EventResult,
@@ -31,7 +29,7 @@ import {
 
 gsap.registerPlugin(ScrollTrigger);
 
-// ─── Tokens ───────────────────────────────────────────────────────────────────
+// ─── Design tokens ────────────────────────────────────────────────────────────
 
 const HOUSE_META: Record<
   string,
@@ -85,7 +83,6 @@ const RANK_NUM_BG = [
   "bg-white/10 text-white",
 ];
 
-// Place icon components — substitutes for 🥇 🥈 🥉
 const PLACE_ICONS = [
   { Icon: Crown, color: "text-yellow-400", size: 13 },
   { Icon: Medal, color: "text-gray-300", size: 13 },
@@ -93,15 +90,10 @@ const PLACE_ICONS = [
 ];
 
 const PLACE_KEYS = ["first", "second", "third"] as const;
-const PLACE_LABEL: Record<string, string> = {
-  first: "1st",
-  second: "2nd",
-  third: "3rd",
-};
 
 type Tab = "house" | "individual" | "housewise";
 
-// ─── helpers ──────────────────────────────────────────────────────────────────
+// ─── Helper ────────────────────────────────────────────────────────────────────
 
 function PlaceIcon({
   place,
@@ -123,6 +115,12 @@ export default function Results({
   standalone?: boolean;
 }) {
   const sectionRef = useRef<HTMLDivElement>(null);
+  const tabContentRef = useRef<HTMLDivElement>(null);
+  const tabBarRef = useRef<HTMLDivElement>(null);
+  const orb1Ref = useRef<HTMLDivElement>(null);
+  const orb2Ref = useRef<HTMLDivElement>(null);
+  const isFirstRender = useRef(true);
+
   const [results, setResults] = useState<EventResult[]>([]);
   const [scores, setScores] = useState<HouseScore[]>([]);
   const [individuals, setIndividuals] = useState<IndividualScore[]>([]);
@@ -133,6 +131,7 @@ export default function Results({
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("house");
 
+  // ── Data fetch ────────────────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
       const [res, negs] = await Promise.all([
@@ -148,19 +147,108 @@ export default function Results({
     })();
   }, []);
 
+  // ── Initial load animation ────────────────────────────────────────────────
   useEffect(() => {
     if (loading) return;
+
     const ctx = gsap.context(() => {
+      // Header scroll-reveal
       gsap.from(".results-header", {
         scrollTrigger: { trigger: sectionRef.current, start: "top 80%" },
-        y: 40,
+        y: 50,
         opacity: 0,
-        duration: 1,
+        duration: 1.1,
         ease: "power3.out",
       });
+
+      // Tab bar drops in from above
+      gsap.from(tabBarRef.current, {
+        y: -24,
+        opacity: 0,
+        duration: 0.7,
+        ease: "power3.out",
+        delay: 0.3,
+      });
+
+      // Floating ambient orbs
+      gsap.to(orb1Ref.current, {
+        y: -40,
+        x: 20,
+        duration: 8,
+        yoyo: true,
+        repeat: -1,
+        ease: "sine.inOut",
+      });
+      gsap.to(orb2Ref.current, {
+        y: 30,
+        x: -15,
+        duration: 10,
+        yoyo: true,
+        repeat: -1,
+        ease: "sine.inOut",
+        delay: 2,
+      });
+
+      // Score count-up (house leaderboard numbers)
+      document.querySelectorAll<HTMLElement>(".score-count").forEach((el) => {
+        const target = parseInt(el.dataset.target ?? "0", 10);
+        gsap.fromTo(
+          el,
+          { innerText: 0 },
+          {
+            innerText: target,
+            duration: 1.6,
+            ease: "power2.out",
+            delay: 0.5,
+            snap: { innerText: 1 },
+            scrollTrigger: { trigger: el, start: "top 90%" },
+          },
+        );
+      });
     }, sectionRef);
+
     return () => ctx.revert();
   }, [loading]);
+
+  // ── Tab-switch animation (skip the very first render, handled by load effect) ──
+  useEffect(() => {
+    if (loading || !tabContentRef.current) return;
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      // Still animate cards for the initial tab
+    }
+
+    const ctx = gsap.context(() => {
+      // Cards stagger up
+      gsap.fromTo(
+        ".anim-card",
+        { y: 36, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.55,
+          stagger: 0.06,
+          ease: "power3.out",
+          clearProps: "transform,opacity",
+        },
+      );
+
+      // Progress bars sweep in
+      gsap.set(".anim-bar", { scaleX: 0, transformOrigin: "left" });
+      gsap.to(".anim-bar", {
+        scaleX: 1,
+        duration: 0.9,
+        stagger: 0.05,
+        ease: "power2.out",
+        delay: 0.15,
+        clearProps: "transform",
+      });
+    }, tabContentRef);
+
+    return () => ctx.revert();
+  }, [activeTab, loading]);
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   const hasData = results.length > 0 || scores.some((s) => s.total !== 0);
 
@@ -170,7 +258,7 @@ export default function Results({
       <section
         ref={sectionRef}
         id="results"
-        className="relative bg-[#0A0A0A] text-white py-24 px-6 md:px-24"
+        className="relative bg-[#0A0A0A] text-white py-20 px-4 sm:px-8 md:px-16 lg:px-24"
       >
         <div className="container mx-auto max-w-6xl text-center">
           <div className="inline-flex items-center gap-3 mb-4">
@@ -180,7 +268,7 @@ export default function Results({
             </span>
             <span className="w-8 h-px bg-[#BA170D]" />
           </div>
-          <h2 className="text-4xl md:text-6xl font-light tracking-tighter mb-10">
+          <h2 className="text-3xl sm:text-5xl md:text-6xl font-light tracking-tighter mb-10">
             Event{" "}
             <span className="font-serif italic text-white/50">Results</span>
           </h2>
@@ -199,18 +287,29 @@ export default function Results({
     <section
       ref={sectionRef}
       id="results"
-      className={`relative bg-[#0A0A0A] text-white py-24 px-6 md:px-24 overflow-hidden ${standalone ? "" : "border-t border-white/5"}`}
+      className={`relative bg-[#0A0A0A] text-white py-20 px-4 sm:px-8 md:px-16 lg:px-24 overflow-hidden ${
+        standalone ? "" : "border-t border-white/5"
+      }`}
     >
       {/* Background */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60vw] h-[50vw] bg-[#BA170D]/4 rounded-full blur-[130px] mix-blend-screen" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80vw] h-[50vw] bg-[#BA170D]/4 rounded-full blur-[130px] mix-blend-screen" />
+        {/* Floating ambient orbs */}
+        <div
+          ref={orb1Ref}
+          className="absolute top-1/4 left-[10%] w-64 h-64 rounded-full bg-[#BA170D]/5 blur-[100px] pointer-events-none"
+        />
+        <div
+          ref={orb2Ref}
+          className="absolute bottom-1/4 right-[8%] w-48 h-48 rounded-full bg-blue-500/5 blur-[80px] pointer-events-none"
+        />
         <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03]" />
       </div>
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_80%)] pointer-events-none opacity-50" />
 
       <div className="container mx-auto relative z-10 max-w-6xl">
         {/* ── Header ── */}
-        <div className="text-center mb-14 results-header">
+        <div className="text-center mb-10 sm:mb-14 results-header">
           <div className="inline-flex items-center gap-3 mb-4">
             <span className="w-8 h-px bg-[#BA170D]" />
             <span className="text-[#BA170D] font-cinzel font-bold text-sm uppercase tracking-[0.3em]">
@@ -218,36 +317,59 @@ export default function Results({
             </span>
             <span className="w-8 h-px bg-[#BA170D]" />
           </div>
-          <h2 className="text-4xl md:text-6xl font-light tracking-tighter">
+          <h2 className="text-3xl sm:text-5xl md:text-6xl font-light tracking-tighter">
             Event{" "}
             <span className="font-serif italic text-white/50">Results</span>
           </h2>
         </div>
 
         {/* ── Tabs ── */}
-        <div className="flex justify-center mb-10">
-          <div className="flex gap-1 bg-white/5 border border-white/10 p-1 rounded-2xl">
-            {[
-              { key: "house" as Tab, label: "House Leaderboard", Icon: Trophy },
-              { key: "individual" as Tab, label: "Individual", Icon: User },
-              { key: "housewise" as Tab, label: "House-wise", Icon: BarChart2 },
-            ].map(({ key, label, Icon }) => (
-              <button
-                key={key}
-                onClick={() => setActiveTab(key)}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
-                  activeTab === key
-                    ? "bg-[#BA170D] text-white shadow-lg shadow-red-900/30"
-                    : "text-gray-400 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                <Icon size={12} />
-                {label}
-              </button>
-            ))}
+        <div className="mb-8 sm:mb-10" ref={tabBarRef}>
+          <div className="flex sm:justify-center">
+            <div className="w-full sm:w-auto flex gap-1 bg-white/5 border border-white/10 p-1 rounded-2xl">
+              {[
+                {
+                  key: "house" as Tab,
+                  label: "House Leaderboard",
+                  short: "Leaders",
+                  Icon: Trophy,
+                },
+                {
+                  key: "individual" as Tab,
+                  label: "Individual",
+                  short: "Individual",
+                  Icon: User,
+                },
+                {
+                  key: "housewise" as Tab,
+                  label: "House-wise",
+                  short: "House-wise",
+                  Icon: BarChart2,
+                },
+              ].map(({ key, label, short, Icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveTab(key)}
+                  className={`flex-1 sm:flex-none flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-5 py-2.5 sm:py-2.5 rounded-xl text-[9px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+                    activeTab === key
+                      ? "bg-[#BA170D] text-white shadow-lg shadow-red-900/30"
+                      : "text-gray-400 hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  <Icon size={13} />
+                  <span className="sm:hidden leading-tight text-center">
+                    {short}
+                  </span>
+                  <span className="hidden sm:inline whitespace-nowrap">
+                    {label}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
+        {/* ── Tab content ── */}
         {loading ? (
           <div className="space-y-4">
             {[1, 2, 3, 4].map((i) => (
@@ -258,14 +380,14 @@ export default function Results({
             ))}
           </div>
         ) : (
-          <>
+          <div ref={tabContentRef}>
             {/* ══════════════════════════════════════════════════════
                 TAB 1 — House Leaderboard
             ══════════════════════════════════════════════════════ */}
             {activeTab === "house" && (
               <div className="space-y-10">
-                {/* Podium cards */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {/* Podium cards — 1 col → 2 col → 4 col */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   {scores.map((hs, idx) => {
                     const meta = HOUSE_META[hs.house] ?? {
                       accent: "text-white",
@@ -280,7 +402,9 @@ export default function Results({
                     return (
                       <div
                         key={hs.house}
-                        className={`relative rounded-2xl border border-white/8 bg-white/[0.03] p-5 flex flex-col gap-3 overflow-hidden group hover:border-white/20 transition-all duration-500 ${idx === 0 ? "ring-1 ring-yellow-400/30" : ""}`}
+                        className={`anim-card relative rounded-2xl border border-white/8 bg-white/[0.03] p-4 sm:p-5 flex flex-col gap-3 overflow-hidden group hover:border-white/20 transition-colors duration-500 ${
+                          idx === 0 ? "ring-1 ring-yellow-400/30" : ""
+                        }`}
                       >
                         <div
                           className={`absolute -top-8 -right-8 w-28 h-28 rounded-full blur-2xl opacity-25 group-hover:opacity-40 transition-opacity ${meta.glow}`}
@@ -289,7 +413,9 @@ export default function Results({
                         {/* Rank + crown */}
                         <div className="flex items-center justify-between relative z-10">
                           <span
-                            className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-black ${RANK_NUM_BG[idx] ?? "bg-white/10 text-white"}`}
+                            className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-black ${
+                              RANK_NUM_BG[idx] ?? "bg-white/10 text-white"
+                            }`}
                           >
                             {idx + 1}
                           </span>
@@ -304,22 +430,22 @@ export default function Results({
                           {hs.house}
                         </p>
 
-                        <p className="text-4xl font-black font-unbounded text-white relative z-10 leading-none">
+                        <p className="text-3xl sm:text-4xl font-black font-unbounded text-white relative z-10 leading-none">
                           {hs.total}
                           <span className="text-sm text-gray-500 font-normal ml-1">
                             pts
                           </span>
                         </p>
 
-                        {/* Bar */}
+                        {/* Animated bar */}
                         <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden relative z-10">
                           <div
-                            className={`h-full rounded-full ${meta.bar}`}
+                            className={`anim-bar h-full rounded-full ${meta.bar}`}
                             style={{ width: `${pct}%` }}
                           />
                         </div>
 
-                        {/* Medal counts with icons */}
+                        {/* Medal counts */}
                         <div className="grid grid-cols-3 gap-1 text-[10px] text-gray-500 relative z-10 pt-1 border-t border-white/5">
                           {PLACE_ICONS.map(({ Icon, color }, pi) => (
                             <span
@@ -338,7 +464,7 @@ export default function Results({
                           ))}
                         </div>
 
-                        {/* +/- breakdown */}
+                        {/* +/- */}
                         <div className="grid grid-cols-2 gap-1 text-[10px] relative z-10">
                           <div className="flex items-center justify-center gap-1 bg-green-500/5 rounded px-1 py-0.5 text-green-400">
                             <TrendingUp size={9} /> {hs.positive}
@@ -359,11 +485,11 @@ export default function Results({
                     <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-5 text-center">
                       Event Winners
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {results.map((r) => (
                         <div
                           key={r.eventTitle}
-                          className="bg-white/[0.03] border border-white/8 rounded-xl px-5 py-4 hover:border-white/20 transition-all duration-300"
+                          className="anim-card bg-white/[0.03] border border-white/8 rounded-xl px-4 sm:px-5 py-4 hover:border-white/20 transition-colors duration-300"
                         >
                           <p className="text-sm font-bold text-white mb-3 truncate">
                             {r.eventTitle}
@@ -396,7 +522,10 @@ export default function Results({
                                   </span>
                                   {entry.house && (
                                     <span
-                                      className={`flex-shrink-0 px-2 py-0.5 rounded-full border text-[10px] font-bold ${meta?.badge ?? "border-white/10 bg-white/5 text-gray-400"}`}
+                                      className={`flex-shrink-0 px-2 py-0.5 rounded-full border text-[10px] font-bold ${
+                                        meta?.badge ??
+                                        "border-white/10 bg-white/5 text-gray-400"
+                                      }`}
                                     >
                                       {entry.house.replace(" House", "")}
                                     </span>
@@ -437,23 +566,28 @@ export default function Results({
                     return (
                       <div
                         key={`${ind.chestNo}-${idx}`}
-                        className={`flex items-center gap-4 bg-white/[0.03] border border-white/8 rounded-2xl px-5 py-4 hover:border-white/15 transition-all duration-300 ${idx < 3 ? "ring-1 " + meta.ring : ""}`}
+                        className={`anim-card flex items-center gap-3 sm:gap-4 bg-white/[0.03] border border-white/8 rounded-2xl px-3 sm:px-5 py-3 sm:py-4 hover:border-white/15 transition-colors duration-300 ${
+                          idx < 3 ? "ring-1 " + meta.ring : ""
+                        }`}
                       >
                         {/* Rank badge */}
                         <span
-                          className={`flex-shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-full text-sm font-black ${RANK_NUM_BG[idx] ?? "bg-white/10 text-white"}`}
+                          className={`flex-shrink-0 inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full text-sm font-black ${
+                            RANK_NUM_BG[idx] ?? "bg-white/10 text-white"
+                          }`}
                         >
                           {idx + 1}
                         </span>
 
                         {/* Info block */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                          {/* Name row */}
+                          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-1.5">
                             <span className="text-white font-bold text-sm truncate">
                               {ind.name}
                             </span>
                             {ind.teamName && (
-                              <span className="text-gray-500 text-xs">
+                              <span className="text-gray-500 text-xs hidden sm:inline">
                                 ({ind.teamName})
                               </span>
                             )}
@@ -471,8 +605,8 @@ export default function Results({
                             )}
                           </div>
 
-                          {/* Win pills */}
-                          <div className="flex flex-wrap gap-1.5 mb-2">
+                          {/* Win pills — hidden on very small screens */}
+                          <div className="hidden sm:flex flex-wrap gap-1.5 mb-2">
                             {ind.wins.map((w, wi) => {
                               const pi = PLACE_KEYS.indexOf(w.place);
                               const { Icon, color } =
@@ -495,7 +629,7 @@ export default function Results({
                           {/* Points bar */}
                           <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
                             <div
-                              className={`h-full rounded-full ${meta.bar}`}
+                              className={`anim-bar h-full rounded-full ${meta.bar}`}
                               style={{ width: `${pct}%` }}
                             />
                           </div>
@@ -504,7 +638,7 @@ export default function Results({
                         {/* Score */}
                         <div className="text-right flex-shrink-0">
                           <p
-                            className={`text-2xl font-black font-unbounded leading-none ${meta.accent}`}
+                            className={`text-xl sm:text-2xl font-black font-unbounded leading-none ${meta.accent}`}
                           >
                             {ind.totalPoints}
                           </p>
@@ -523,7 +657,7 @@ export default function Results({
                 TAB 3 — House-wise Breakdown
             ══════════════════════════════════════════════════════ */}
             {activeTab === "housewise" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 {houseDetails.map((hd, idx) => {
                   const meta = HOUSE_META[hd.house] ?? {
                     accent: "text-white",
@@ -536,15 +670,19 @@ export default function Results({
                   return (
                     <div
                       key={hd.house}
-                      className={`relative rounded-2xl border border-white/8 overflow-hidden ${idx === 0 ? "ring-1 ring-yellow-400/20" : ""}`}
+                      className={`anim-card relative rounded-2xl border border-white/8 overflow-hidden ${
+                        idx === 0 ? "ring-1 ring-yellow-400/20" : ""
+                      }`}
                     >
                       {/* House header */}
                       <div
-                        className={`px-6 py-4 flex items-center justify-between ${meta.bg} border-b border-white/8`}
+                        className={`px-4 sm:px-6 py-4 flex items-center justify-between ${meta.bg} border-b border-white/8`}
                       >
                         <div className="flex items-center gap-3">
                           <span
-                            className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-black ${RANK_NUM_BG[idx] ?? "bg-white/10 text-white"}`}
+                            className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-black ${
+                              RANK_NUM_BG[idx] ?? "bg-white/10 text-white"
+                            }`}
                           >
                             {idx + 1}
                           </span>
@@ -562,7 +700,7 @@ export default function Results({
                         </div>
                         <div className="text-right">
                           <p
-                            className={`text-3xl font-black font-unbounded ${meta.accent}`}
+                            className={`text-2xl sm:text-3xl font-black font-unbounded ${meta.accent}`}
                           >
                             {hd.total}
                           </p>
@@ -580,7 +718,7 @@ export default function Results({
                       </div>
 
                       {/* Wins list */}
-                      <div className="px-6 py-4 bg-white/[0.02] space-y-2">
+                      <div className="px-4 sm:px-6 py-4 bg-white/[0.02] space-y-2">
                         {hd.wins.length === 0 ? (
                           <p className="text-xs text-gray-600 py-2 text-center">
                             No event wins yet
@@ -602,7 +740,7 @@ export default function Results({
                                 <span className="flex-1 text-white truncate">
                                   {w.eventTitle}
                                 </span>
-                                <span className="text-gray-600 flex-shrink-0 capitalize text-[10px]">
+                                <span className="text-gray-600 flex-shrink-0 capitalize text-[10px] hidden sm:block">
                                   {w.eventType}
                                 </span>
                                 <span className="text-green-400 font-bold font-mono flex-shrink-0">
@@ -635,7 +773,7 @@ export default function Results({
                                   {nm.offense}
                                 </span>
                                 {nm.eventTitle && (
-                                  <span className="text-gray-600 text-[10px] flex-shrink-0 italic">
+                                  <span className="text-gray-600 text-[10px] flex-shrink-0 italic hidden sm:block">
                                     {nm.eventTitle}
                                   </span>
                                 )}
@@ -649,7 +787,7 @@ export default function Results({
                 })}
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </section>
