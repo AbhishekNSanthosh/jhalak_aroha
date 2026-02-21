@@ -283,12 +283,12 @@ export const jhalakEvents: EventRule[] = [
         ]
     },
     {
-        title: "Karnatic Music",
+        title: "Carnatic Music",
         category: "onstage",
         rules: [
             "Max. time limit: 5 minutes.",
             "Solo performance only",
-            "Participants must perform classical Kamatic (Carnatic) music compositions.",
+            "Participants must perform classical Carnatic music compositions.",
             "Film songs, fusion, light music, bhajans in cinematic style, or western adaptations are not permitted.",
             "Electronic shruti box / tambura apps are allowed."
         ]

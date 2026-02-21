@@ -10,6 +10,7 @@ import JhalakRules from "@/components/JhalakRules";
 import ChiefGuests from "@/components/ChiefGuests";
 import Footer from "@/components/Footer";
 import SplashScreen from "@/components/SplashScreen";
+import Results from "@/components/Results";
 import { AnimatePresence } from "framer-motion";
 
 export default function Home() {
@@ -33,7 +34,8 @@ export default function Home() {
       <JhalakEvents />
       <JhalakRules />
 
-      {/* Chief Guests & Judges */}
+      {/* Results & Leaderboard */}
+      <Results />
 
       <Footer />
     </main>
