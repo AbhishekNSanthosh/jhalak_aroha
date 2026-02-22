@@ -35,6 +35,8 @@ export interface ResultEntry {
     name: string;
     house: string;
     teamName?: string; // for group events
+    department?: string;
+    semester?: string;
 }
 
 export interface NegativeMarking {
@@ -83,12 +85,42 @@ export const saveEventResult = async (
     }
 };
 
-/** Fetch all event results */
+/** Fetch all event results, enriched with department/semester from the users collection */
 export const fetchAllResults = async (): Promise<EventResult[]> => {
     if (!db) return [];
     try {
-        const snap = await getDocs(collection(db, "event_results"));
-        return snap.docs.map((d) => d.data() as EventResult);
+        const [resultsSnap, usersSnap] = await Promise.all([
+            getDocs(collection(db, "event_results")),
+            getDocs(collection(db, "users")),
+        ]);
+
+        // Build a map from chestNo -> { department, semester }
+        const chestMap = new Map<string, { department?: string; semester?: string }>();
+        usersSnap.docs.forEach((d) => {
+            const u = d.data();
+            if (u.chestNo) {
+                chestMap.set(u.chestNo, {
+                    department: u.department || undefined,
+                    semester: u.semester || undefined,
+                });
+            }
+        });
+
+        const enrich = (entry: ResultEntry | undefined): ResultEntry | undefined => {
+            if (!entry) return undefined;
+            const extra = chestMap.get(entry.chestNo);
+            return extra ? { ...entry, ...extra } : entry;
+        };
+
+        return resultsSnap.docs.map((d) => {
+            const r = d.data() as EventResult;
+            return {
+                ...r,
+                first: enrich(r.first),
+                second: enrich(r.second),
+                third: enrich(r.third),
+            };
+        });
     } catch {
         return [];
     }
@@ -242,6 +274,8 @@ export interface IndividualScore {
     chestNo: string;
     house: string;
     teamName?: string;
+    department?: string;
+    semester?: string;
     totalPoints: number;
     wins: { eventTitle: string; place: "first" | "second" | "third"; pts: number }[];
 }
@@ -268,6 +302,8 @@ export const computeIndividualScores = (results: EventResult[]): IndividualScore
                 chestNo: entry.chestNo,
                 house: normaliseHouse(entry.house || ""),
                 teamName: entry.teamName,
+                department: entry.department,
+                semester: entry.semester,
                 totalPoints: 0,
                 wins: [],
             });

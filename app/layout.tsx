@@ -1,5 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Cinzel_Decorative } from "next/font/google";
+import {
+  Geist,
+  Geist_Mono,
+  Cinzel_Decorative,
+  Poppins,
+} from "next/font/google";
 import "./globals.css";
 import SmoothScroll from "@/components/SmoothScroll";
 import { Toaster } from "react-hot-toast";
@@ -20,6 +25,13 @@ const cinzel = Cinzel_Decorative({
   variable: "--font-cinzel",
   subsets: ["latin"],
   weight: ["400", "700", "900"],
+});
+
+const poppins = Poppins({
+  variable: "--font-poppins",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -78,7 +90,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} ${poppins.variable} antialiased`}
       >
         <SmoothScroll>
           <NetworkGuard>

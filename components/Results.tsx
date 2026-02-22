@@ -290,6 +290,7 @@ export default function Results({
       className={`relative bg-[#0A0A0A] text-white py-20 px-4 sm:px-8 md:px-16 lg:px-24 overflow-hidden ${
         standalone ? "" : "border-t border-white/5"
       }`}
+      style={{ fontFamily: "var(--font-poppins), sans-serif" }}
     >
       {/* Background */}
       <div className="absolute inset-0 pointer-events-none">
@@ -512,14 +513,26 @@ export default function Results({
                                     size={13}
                                     className={`${color} flex-shrink-0`}
                                   />
-                                  <span className="text-white font-semibold truncate flex-1">
-                                    {entry.name}
+                                  <span className="text-white font-semibold truncate flex-1 capitalize">
+                                    {entry.name.toLowerCase()}
                                     {entry.teamName && (
-                                      <span className="text-gray-500 font-normal ml-1">
-                                        ({entry.teamName})
+                                      <span className="text-gray-500 font-normal ml-1 lowercase">
+                                        ({entry.teamName.toLowerCase()})
                                       </span>
                                     )}
                                   </span>
+                                  {(entry.department || entry.semester) && (
+                                    <span className="flex-shrink-0 px-1.5 py-0.5 rounded-full border border-white/10 bg-white/5 text-[10px] font-bold text-sky-400">
+                                      {entry.semester
+                                        ? `${entry.semester} `
+                                        : ""}
+                                      {entry.department === "CIVIL"
+                                        ? "Civil"
+                                        : entry.department === "MECH"
+                                          ? "Mech"
+                                          : entry.department}
+                                    </span>
+                                  )}
                                   {entry.house && (
                                     <span
                                       className={`flex-shrink-0 px-2 py-0.5 rounded-full border text-[10px] font-bold ${
@@ -583,12 +596,12 @@ export default function Results({
                         <div className="flex-1 min-w-0">
                           {/* Name row */}
                           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-1.5">
-                            <span className="text-white font-bold text-sm truncate">
-                              {ind.name}
+                            <span className="text-white font-bold text-sm truncate capitalize">
+                              {ind.name.toLowerCase()}
                             </span>
                             {ind.teamName && (
-                              <span className="text-gray-500 text-xs hidden sm:inline">
-                                ({ind.teamName})
+                              <span className="text-gray-500 text-xs hidden sm:inline lowercase">
+                                ({ind.teamName.toLowerCase()})
                               </span>
                             )}
                             {ind.chestNo && (
@@ -601,6 +614,16 @@ export default function Results({
                                 className={`px-2 py-0.5 rounded-full border text-[10px] font-bold ${meta.badge}`}
                               >
                                 {ind.house.replace(" House", "")}
+                              </span>
+                            )}
+                            {(ind.department || ind.semester) && (
+                              <span className="px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-[10px] font-bold text-sky-400">
+                                {ind.semester ? `${ind.semester} ` : ""}
+                                {ind.department === "CIVIL"
+                                  ? "Civil"
+                                  : ind.department === "MECH"
+                                    ? "Mech"
+                                    : ind.department}
                               </span>
                             )}
                           </div>

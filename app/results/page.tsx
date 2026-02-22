@@ -60,7 +60,7 @@ function ResultsSplash({ onDone }: { onDone: () => void }) {
             // Elegant fade out
             gsap.to(containerRef.current, {
               autoAlpha: 0,
-              duration: 0.9,
+              duration: 1.2,
               ease: "power2.inOut",
               onComplete: onDone,
             });
@@ -68,73 +68,75 @@ function ResultsSplash({ onDone }: { onDone: () => void }) {
         },
       });
 
-      // 0.0s — Central glow expands
+      // 0.0s — Central glow expands (subtler)
       tl.to(
         glowRef.current,
-        { scale: 1, autoAlpha: 1, duration: 1.4, ease: "power2.out" },
+        { scale: 1, autoAlpha: 0.6, duration: 2, ease: "power2.out" },
         0,
       );
 
-      // 0.4s — Logo unblurs from scale 1.4 → 1 (cinematic focus pull)
+      // 0.4s — Logo unblurs from scale 1.1 → 1 (gentle focus pull)
       tl.to(
         logoWrapRef.current,
         {
           autoAlpha: 1,
           scale: 1,
           filter: "blur(0px)",
-          duration: 1.2,
+          duration: 1.5,
           ease: "power2.out",
         },
         0.4,
       );
 
-      // 0.8s — Framing lines extend outward
+      // 0.8s — Framing lines extend outward slowly
       tl.to(
         line1Ref.current,
-        { scaleX: 1, duration: 0.7, ease: "power3.out" },
+        { scaleX: 1, duration: 1.2, ease: "power3.out" },
         0.8,
       );
       tl.to(
         line2Ref.current,
-        { scaleX: 1, duration: 0.7, ease: "power3.out" },
+        { scaleX: 1, duration: 1.2, ease: "power3.out" },
         0.9,
       );
 
-      // 1.0s — "EVENT" letters slam in with stagger + bounce
+      // 1.0s — "EVENT" letters slide up smoothly
+      gsap.set(letters1Ref.current, { y: 20, autoAlpha: 0 });
       tl.to(
         letters1Ref.current,
         {
           y: 0,
           autoAlpha: 1,
-          duration: 0.55,
-          stagger: 0.055,
-          ease: "back.out(1.6)",
+          duration: 0.8,
+          stagger: 0.08,
+          ease: "power3.out",
         },
         1.0,
       );
 
-      // 1.35s — "RESULTS" letters slam in
+      // 1.35s — "RESULTS" letters slide up smoothly
+      gsap.set(letters2Ref.current, { y: 20, autoAlpha: 0 });
       tl.to(
         letters2Ref.current,
         {
           y: 0,
           autoAlpha: 1,
-          duration: 0.55,
-          stagger: 0.05,
-          ease: "back.out(1.6)",
+          duration: 0.8,
+          stagger: 0.08,
+          ease: "power3.out",
         },
         1.35,
       );
 
-      // 1.8s — Subtitle + progress track
+      // 1.8s — Subtitle + progress track fade in
       tl.to(
         [subtitleRef.current, progressTrack.current],
         {
           autoAlpha: 1,
           y: 0,
-          duration: 0.6,
-          stagger: 0.08,
-          ease: "power3.out",
+          duration: 1,
+          stagger: 0.15,
+          ease: "power2.out",
         },
         1.8,
       );
@@ -267,13 +269,12 @@ function ResultsSplash({ onDone }: { onDone: () => void }) {
               ref={(el) => {
                 if (el) letters1Ref.current[i] = el;
               }}
-              className="inline-block font-cinzel font-black text-white"
+              className="inline-block font-black text-white"
               style={{
+                fontFamily: "var(--font-poppins)",
                 fontSize: "clamp(2rem, 9vw, 4.5rem)",
                 lineHeight: 1,
-                letterSpacing: "0.08em",
-                textShadow:
-                  "0 0 40px rgba(186,23,13,0.5), 0 2px 0 rgba(0,0,0,0.8)",
+                letterSpacing: "0.15em",
                 display: "inline-block",
               }}
             >
@@ -290,14 +291,13 @@ function ResultsSplash({ onDone }: { onDone: () => void }) {
               ref={(el) => {
                 if (el) letters2Ref.current[i] = el;
               }}
-              className="inline-block font-cinzel font-black"
+              className="inline-block font-black"
               style={{
+                fontFamily: "var(--font-poppins)",
                 fontSize: "clamp(2.2rem, 10vw, 5rem)",
                 lineHeight: 1,
-                letterSpacing: "0.12em",
+                letterSpacing: "0.2em",
                 color: "#BA170D",
-                textShadow:
-                  "0 0 50px rgba(186,23,13,0.7), 0 0 20px rgba(255,80,60,0.4)",
                 display: "inline-block",
               }}
             >
