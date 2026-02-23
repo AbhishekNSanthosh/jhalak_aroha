@@ -85,7 +85,7 @@ export default function EventRegistrationCard({
       currentUser &&
       searchEmail.toLowerCase() === currentUser.email?.toLowerCase()
     ) {
-      setSearchError("Leader already registered.");
+      setSearchError("Leader cannot be added as member.");
       return;
     }
     if (
@@ -111,6 +111,13 @@ export default function EventRegistrationCard({
       } else {
         const userDoc = snapshot.docs[0];
         const userData = userDoc.data();
+
+        if (currentUser && userDoc.id === currentUser.uid) {
+          setSearchError("Leader cannot be added as member.");
+          setSearchLoading(false);
+          return;
+        }
+
         const leaderHouse = currentUser?.house;
         const memberHouse = userData?.house;
 

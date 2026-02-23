@@ -311,13 +311,22 @@ export const createTeam = async (
             transaction.set(teamCounterRef, { count: newTeamCount }, { merge: true });
 
             const newTeamRef = doc(collection(firestore, "teams"));
+            const uniqueMembers = [];
+            const seenUids = new Set();
+            for (const m of members) {
+                if (!seenUids.has(m.uid)) {
+                    seenUids.add(m.uid);
+                    uniqueMembers.push(m);
+                }
+            }
+
             const teamData = {
                 id: newTeamRef.id,
                 eventId: eventTitle,
                 eventTitle: eventTitle,
                 leaderId: leaderUid,
-                members: members,
-                memberIds: members.map(m => m.uid),
+                members: uniqueMembers,
+                memberIds: uniqueMembers.map(m => m.uid),
                 status: "confirmed",
                 teamChestNo: teamChestNo,
                 createdAt: new Date().toISOString()
@@ -334,7 +343,7 @@ export const createTeam = async (
                 teamChestNo: teamChestNo,
                 leaderChestNo: finalMemberChestNos[leaderUid],
                 memberChestNos: finalMemberChestNos,
-                memberIds: members.map(m => m.uid),
+                memberIds: uniqueMembers.map(m => m.uid),
                 registeredAt: serverTimestamp()
             });
 

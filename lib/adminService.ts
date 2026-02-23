@@ -603,7 +603,7 @@ export const adminAddUserToEvent = async (eventTitle: string, userEmail: string)
 
         if (offStageCount > 4) return { success: false, message: `Limit Reached: Max 4 Off-Stage events.` };
         if (onStageIndCount > 3) return { success: false, message: `Limit Reached: Max 3 Individual On-Stage events.` };
-        if (onStageGroupCount > 2) return { success: false, message: `Limit Reached: Max 2 Group events.` };
+        if (onStageGroupCount > 3) return { success: false, message: `Limit Reached: Max 3 Group events.` };
 
         for (const [date, events] of Object.entries(datesMap)) {
             if (events.length > 1) {

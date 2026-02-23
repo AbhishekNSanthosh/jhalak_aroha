@@ -208,13 +208,15 @@ export default function RegisterPage() {
         role: "leader",
         status: "confirmed",
       },
-      ...members.map((m) => ({
-        uid: m.uid,
-        name: m.name,
-        email: m.email,
-        role: "member",
-        status: "confirmed",
-      })),
+      ...members
+        .filter((m) => m.uid !== user.uid)
+        .map((m) => ({
+          uid: m.uid,
+          name: m.name,
+          email: m.email,
+          role: "member",
+          status: "confirmed",
+        })),
     ];
 
     const result = await createTeam(
