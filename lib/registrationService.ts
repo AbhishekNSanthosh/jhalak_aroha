@@ -470,14 +470,21 @@ export const leaveTeam = async (uid: string, teamId: string): Promise<{ success:
             if (teamData.leaderId !== uid) throw new Error("Only the leader can delete.");
 
             const memberIds = teamData.memberIds || [];
-            for (const memberId of memberIds) {
-                const regDocRef = doc(firestore, "registrations", memberId);
-                const regDoc = await transaction.get(regDocRef);
-                if (regDoc.exists()) {
-                    const data = regDoc.data() as SoloRegistration;
+
+            // 1. All Reads First
+            const memberRegs = await Promise.all(memberIds.map(async (mid) => {
+                const ref = doc(firestore, "registrations", mid);
+                const snap = await transaction.get(ref);
+                return { mid, ref, snap };
+            }));
+
+            // 2. All Writes Second
+            for (const { ref, snap } of memberRegs) {
+                if (snap.exists()) {
+                    const data = snap.data() as SoloRegistration;
                     const updatedTeamEvents = (data.teamEvents || []).filter(t => t !== teamData.eventTitle);
                     if (updatedTeamEvents.length !== (data.teamEvents || []).length) {
-                        transaction.set(regDocRef, { teamEvents: updatedTeamEvents }, { merge: true });
+                        transaction.set(ref, { teamEvents: updatedTeamEvents }, { merge: true });
                     }
                 }
             }
