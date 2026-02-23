@@ -269,12 +269,11 @@ export const createTeam = async (
                     while (!isUnique) {
                         currentGlobalCount++;
                         const candidate = (100 + currentGlobalCount).toString().padStart(3, '0');
-                        const userQuery = query(collection(firestore, "users"), where("chestNo", "==", candidate));
-                        const querySnap = await getDocs(userQuery);
+                        // Use only transactional get on lock docs
                         const chestNoLockRef = doc(firestore, "taken_chest_numbers", candidate);
                         const chestNoLockDoc = await transaction.get(chestNoLockRef);
 
-                        if (querySnap.empty && !chestNoLockDoc.exists()) {
+                        if (!chestNoLockDoc.exists()) {
                             finalMemberChestNos[uid] = candidate;
                             memberChestNoUpdates[uid] = candidate;
                             isUnique = true;
@@ -364,13 +363,17 @@ export const updateUserSoloRegistrations = async (uid: string, newEvents: string
             const added = newEvents.filter(e => !currentEvents.includes(e));
             const removed = currentEvents.filter(e => !newEvents.includes(e));
 
-            for (const eventTitle of added) {
-                const status = await checkRegistrationStatus(eventTitle);
-                if (status.isClosed) throw new Error(`Registration closed for ${eventTitle}.`);
+            const addedEventStatuses = await Promise.all(
+                added.map(async (eventTitle) => ({
+                    title: eventTitle,
+                    status: await checkRegistrationStatus(eventTitle)
+                }))
+            );
 
-                // Extra check: Is it already a team event?
-                if (currentTeamEvents.includes(eventTitle)) {
-                    throw new Error(`Already registered for ${eventTitle} in a team.`);
+            for (const item of addedEventStatuses) {
+                if (item.status.isClosed) throw new Error(`Registration closed for ${item.title}.`);
+                if (currentTeamEvents.includes(item.title)) {
+                    throw new Error(`Already registered for ${item.title} in a team.`);
                 }
             }
 
@@ -389,6 +392,7 @@ export const updateUserSoloRegistrations = async (uid: string, newEvents: string
                 throw new Error("Profile incomplete.");
             }
 
+            // 2. Uniqueness & Chest Number Generation
             let userChestNo = userData.chestNo || null;
             let globalCounterRef = doc(firestore, "counters", "user_chest_numbers");
             let currentGlobalCount = 0;
@@ -401,12 +405,12 @@ export const updateUserSoloRegistrations = async (uid: string, newEvents: string
                 while (!isUnique) {
                     currentGlobalCount++;
                     const candidate = (100 + currentGlobalCount).toString().padStart(3, '0');
-                    const userQuery = query(collection(firestore, "users"), where("chestNo", "==", candidate));
-                    const querySnap = await getDocs(userQuery);
+                    // In a transaction, we should ONLY use transaction.get for checks.
+                    // We rely on the 'taken_chest_numbers' collection as our source of truth for allocated numbers.
                     const chestNoLockRef = doc(firestore, "taken_chest_numbers", candidate);
                     const chestNoLockDoc = await transaction.get(chestNoLockRef);
 
-                    if (querySnap.empty && !chestNoLockDoc.exists()) {
+                    if (!chestNoLockDoc.exists()) {
                         userChestNo = candidate;
                         isUnique = true;
                     }

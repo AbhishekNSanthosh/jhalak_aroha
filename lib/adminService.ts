@@ -627,20 +627,15 @@ export const adminAddUserToEvent = async (eventTitle: string, userEmail: string)
                 while (!isUnique) {
                     currentGlobalCount++;
                     const candidate = (100 + currentGlobalCount).toString().padStart(3, '0');
-                    // Check if taken in users
-                    const userQuery = query(collection(firestore, "users"), where("chestNo", "==", candidate));
-                    const querySnap = await getDocs(userQuery);
-
-                    // Check lock table
+                    // Check only via lock table in transaction
                     const chestNoLockRef = doc(firestore, "taken_chest_numbers", candidate);
                     const chestNoLockDoc = await transaction.get(chestNoLockRef);
 
-                    if (querySnap.empty && !chestNoLockDoc.exists()) {
+                    if (!chestNoLockDoc.exists()) {
                         userChestNo = candidate;
                         isUnique = true;
                     }
                 }
-
                 // Reserve it
                 transaction.set(globalCounterRef, { count: currentGlobalCount }, { merge: true });
                 transaction.update(userDoc.ref, { chestNo: userChestNo });
