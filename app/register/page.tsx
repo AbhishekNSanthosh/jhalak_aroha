@@ -7,7 +7,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { categories, EventItem, TeamRegistration } from "@/data/constant";
 import Navbar from "@/components/Navbar";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Search, X } from "lucide-react";
 import toast from "react-hot-toast";
 import ConfirmToast from "@/components/ConfirmToast";
 import EventRegistrationCard from "@/components/EventRegistrationCard";
@@ -74,6 +74,7 @@ export default function RegisterPage() {
   const [eventSettings, setEventSettings] = useState<Record<string, boolean>>(
     {},
   );
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Initial Auth & Data Fetch
   useEffect(() => {
@@ -333,97 +334,177 @@ export default function RegisterPage() {
           </div>
         </header>
 
+        {/* Search Bar */}
+        <div className="relative mb-12 max-w-2xl bg-white/5 rounded-2xl p-1 backdrop-blur-md border border-white/10 focus-within:border-[#BA170D]/50 transition-all">
+          <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+            <Search
+              className="text-gray-400 group-focus-within:text-[#BA170D]"
+              size={20}
+            />
+          </div>
+          <input
+            type="text"
+            placeholder="Search events by name, description or tags..."
+            className="w-full bg-transparent py-4 pl-14 pr-12 focus:outline-none transition-all text-white placeholder:text-gray-500 font-medium"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute inset-y-0 right-4 flex items-center p-2 text-gray-400 hover:text-white transition-colors"
+            >
+              <X size={18} />
+            </button>
+          )}
+        </div>
+
         <div className="space-y-16">
           {categories
             .filter((cat) => cat.title !== "Flagship Event")
-            .map((cat) => (
-              <section key={cat.title}>
-                <h2 className="text-xl md:text-2xl font-black font-unbounded text-[#BA170D] mb-8 flex items-center gap-5 uppercase tracking-tighter">
-                  {cat.title}
-                  <div className="h-px flex-1 bg-white/10"></div>
-                </h2>
+            .map((cat) => {
+              const filteredItems = cat.items.filter(
+                (item) =>
+                  item.title
+                    .toLowerCase()
+                    .includes(searchQuery.toLowerCase()) ||
+                  item.description
+                    .toLowerCase()
+                    .includes(searchQuery.toLowerCase()) ||
+                  item.tags.some((tag) =>
+                    tag.toLowerCase().includes(searchQuery.toLowerCase()),
+                  ),
+              );
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {loading
-                    ? Array.from({ length: 6 }).map((_, i) => (
-                        <EventCardSkeleton key={i} />
-                      ))
-                    : cat.items
-                        .sort((a, b) => {
-                          const dateA = a.date
-                            ? new Date(a.date).getTime()
-                            : Infinity;
-                          const dateB = b.date
-                            ? new Date(b.date).getTime()
-                            : Infinity;
-                          return dateA - dateB;
-                        })
-                        .map((event) => {
-                          // Check local pending state
-                          const isSoloRegistered = pendingSoloEvents.includes(
-                            event.title,
-                          );
+              if (filteredItems.length === 0 && searchQuery) return null;
 
-                          // Check if registered as Team (server state)
-                          const teamReg = registrations.teamEvents.find(
-                            (t) => t.eventTitle === event.title,
-                          );
+              return (
+                <section key={cat.title}>
+                  <h2 className="text-xl md:text-2xl font-black font-unbounded text-[#BA170D] mb-8 flex items-center gap-5 uppercase tracking-tighter">
+                    {cat.title}
+                    <div className="h-px flex-1 bg-white/10"></div>
+                  </h2>
 
-                          const isSelected = isSoloRegistered || !!teamReg;
-                          const isLocked =
-                            !!teamReg && teamReg.leaderId !== user?.uid;
-                          const isClosed = eventSettings[event.title] || false;
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {loading
+                      ? Array.from({ length: 6 }).map((_, i) => (
+                          <EventCardSkeleton key={i} />
+                        ))
+                      : filteredItems
+                          .sort((a, b) => {
+                            const dateA = a.date
+                              ? new Date(a.date).getTime()
+                              : Infinity;
+                            const dateB = b.date
+                              ? new Date(b.date).getTime()
+                              : Infinity;
+                            return dateA - dateB;
+                          })
+                          .map((event) => {
+                            // Check local pending state
+                            const isSoloRegistered = pendingSoloEvents.includes(
+                              event.title,
+                            );
 
-                          // Calculate if registration should be disabled based on limits
-                          let isDisabled = false;
-                          if (!isSelected) {
-                            if (
-                              event.categoryType === "off_stage" &&
-                              counts.offStage >= 4
-                            ) {
-                              isDisabled = true;
-                            } else if (
-                              event.categoryType === "on_stage" ||
-                              event.categoryType === "flagship"
-                            ) {
+                            // Check if registered as Team (server state)
+                            const teamReg = registrations.teamEvents.find(
+                              (t) => t.eventTitle === event.title,
+                            );
+
+                            const isSelected = isSoloRegistered || !!teamReg;
+                            const isLocked =
+                              !!teamReg && teamReg.leaderId !== user?.uid;
+                            const isClosed =
+                              eventSettings[event.title] || false;
+
+                            // Calculate if registration should be disabled based on limits
+                            let isDisabled = false;
+                            if (!isSelected) {
                               if (
-                                event.eventType === "individual" &&
-                                counts.onStageInd >= 3
+                                event.categoryType === "off_stage" &&
+                                counts.offStage >= 4
                               ) {
                                 isDisabled = true;
                               } else if (
-                                event.eventType === "group" &&
-                                counts.onStageGroup >= 2
+                                event.categoryType === "on_stage" ||
+                                event.categoryType === "flagship"
                               ) {
-                                isDisabled = true;
+                                if (
+                                  event.eventType === "individual" &&
+                                  counts.onStageInd >= 3
+                                ) {
+                                  isDisabled = true;
+                                } else if (
+                                  event.eventType === "group" &&
+                                  counts.onStageGroup >= 2
+                                ) {
+                                  isDisabled = true;
+                                }
                               }
                             }
-                          }
 
-                          return (
-                            <EventRegistrationCard
-                              key={event.title}
-                              event={event}
-                              isSelected={isSelected}
-                              isLocked={isLocked}
-                              isRegistrationClosed={isClosed}
-                              isDisabled={isDisabled}
-                              teamDetails={teamReg}
-                              onToggle={() => handleToggleSolo(event)} // Handles local state
-                              onCreateTeam={(members: any[]) =>
-                                handleCreateTeam(event, members)
-                              }
-                              onLeaveTeam={async () => {
-                                if (teamReg?.id)
-                                  await handleLeaveTeam(teamReg.id);
-                              }}
-                              currentUser={userProfile || user}
-                            />
-                          );
-                        })}
+                            return (
+                              <EventRegistrationCard
+                                key={event.title}
+                                event={event}
+                                isSelected={isSelected}
+                                isLocked={isLocked}
+                                isRegistrationClosed={isClosed}
+                                isDisabled={isDisabled}
+                                teamDetails={teamReg}
+                                onToggle={() => handleToggleSolo(event)} // Handles local state
+                                onCreateTeam={(members: any[]) =>
+                                  handleCreateTeam(event, members)
+                                }
+                                onLeaveTeam={async () => {
+                                  if (teamReg?.id)
+                                    await handleLeaveTeam(teamReg.id);
+                                }}
+                                currentUser={userProfile || user}
+                              />
+                            );
+                          })}
+                  </div>
+                </section>
+              );
+            })}
+
+          {/* No Results found state */}
+          {searchQuery &&
+            categories.every(
+              (cat) =>
+                cat.title === "Flagship Event" ||
+                !cat.items.some(
+                  (item) =>
+                    item.title
+                      .toLowerCase()
+                      .includes(searchQuery.toLowerCase()) ||
+                    item.description
+                      .toLowerCase()
+                      .includes(searchQuery.toLowerCase()) ||
+                    item.tags.some((tag) =>
+                      tag.toLowerCase().includes(searchQuery.toLowerCase()),
+                    ),
+                ),
+            ) && (
+              <div className="text-center py-20 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-md">
+                <div className="bg-[#BA170D]/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-[#BA170D]/20">
+                  <Search className="text-[#BA170D]" size={32} />
                 </div>
-              </section>
-            ))}
+                <h3 className="text-2xl font-black font-unbounded text-white mb-2 uppercase tracking-tighter">
+                  No Events Found
+                </h3>
+                <p className="text-gray-400 font-medium">
+                  We couldn't find any events matching "{searchQuery}"
+                </p>
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="mt-8 text-[#BA170D] font-black uppercase tracking-[0.3em] text-[10px] hover:underline transition-all"
+                >
+                  Clear Search
+                </button>
+              </div>
+            )}
         </div>
       </div>
 
