@@ -100,7 +100,7 @@ export const validateRegistrationRules = (
 
     if (offStageCount > 4) return { valid: false, message: `Limit Reached: Maximum of 4 Off-Stage events allowed. Current selection: ${offStageCount}.` };
     if (onStageIndCount > 3) return { valid: false, message: `Limit Reached: Maximum of 3 Individual On-Stage events allowed. Current selection: ${onStageIndCount}.` };
-    if (onStageGroupCount > 2) return { valid: false, message: `Limit Reached: Maximum of 2 Group events allowed. Current selection: ${onStageGroupCount}.` };
+    if (onStageGroupCount > 3) return { valid: false, message: `Limit Reached: Maximum of 3 Group events allowed. Current selection: ${onStageGroupCount}.` };
 
     return { valid: true };
 };

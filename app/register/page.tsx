@@ -308,7 +308,7 @@ export default function RegisterPage() {
               {
                 label: "Group",
                 count: counts.onStageGroup,
-                max: 2,
+                max: 3,
                 color: "text-purple-400",
               },
             ].map((p, i) => (
@@ -436,7 +436,7 @@ export default function RegisterPage() {
                                   isDisabled = true;
                                 } else if (
                                   event.eventType === "group" &&
-                                  counts.onStageGroup >= 2
+                                  counts.onStageGroup >= 3
                                 ) {
                                   isDisabled = true;
                                 }
