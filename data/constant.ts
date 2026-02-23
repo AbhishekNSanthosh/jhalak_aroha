@@ -496,9 +496,9 @@ export const categories: Category[] = [
             {
                 title: "Spot Choreography",
                 description: "Impromptu dance choreography on a given theme or music.",
-                tags: ["Group", "Dance", "On-the-spot"],
-                minParticipants: 2, // assumed
-                maxParticipants: null,
+                tags: ["Solo", "Dance", "On-the-spot"],
+                minParticipants: 1,
+                maxParticipants: 1,
                 timeLimit: "3 minutes",
                 rules: [
                     "Theme/music provided on the spot",
@@ -507,7 +507,7 @@ export const categories: Category[] = [
                     "No dangerous props"
                 ],
                 gradient: "from-lime-800 to-black",
-                eventType: 'group',
+                eventType: 'individual',
                 categoryType: 'on_stage',
                 shortCode: 'SPOT'
             },
