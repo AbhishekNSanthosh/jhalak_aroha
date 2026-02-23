@@ -96,15 +96,7 @@ export const validateRegistrationRules = (
         }
     });
 
-    // Validate 1 event per day rule
-    for (const [date, events] of Object.entries(datesMap)) {
-        if (events.length > 1) {
-            return {
-                valid: false,
-                message: `Schedule Conflict: You are already registered for "${events[0]}" on ${date}. Participation is limited to one event per day.`
-            };
-        }
-    }
+
 
     if (offStageCount > 4) return { valid: false, message: `Limit Reached: Maximum of 4 Off-Stage events allowed. Current selection: ${offStageCount}.` };
     if (onStageIndCount > 3) return { valid: false, message: `Limit Reached: Maximum of 3 Individual On-Stage events allowed. Current selection: ${onStageIndCount}.` };

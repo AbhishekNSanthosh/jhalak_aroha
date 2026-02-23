@@ -349,71 +349,78 @@ export default function RegisterPage() {
                         <EventCardSkeleton key={i} />
                       ))
                     : cat.items
-                      .filter((event) => {
-                        const isSelected =
-                          pendingSoloEvents.includes(event.title) ||
-                          registrations.teamEvents.some(
+                        .sort((a, b) => {
+                          const dateA = a.date
+                            ? new Date(a.date).getTime()
+                            : Infinity;
+                          const dateB = b.date
+                            ? new Date(b.date).getTime()
+                            : Infinity;
+                          return dateA - dateB;
+                        })
+                        .map((event) => {
+                          // Check local pending state
+                          const isSoloRegistered = pendingSoloEvents.includes(
+                            event.title,
+                          );
+
+                          // Check if registered as Team (server state)
+                          const teamReg = registrations.teamEvents.find(
                             (t) => t.eventTitle === event.title,
                           );
-                        const isClosed = eventSettings[event.title] || false;
-                        return isSelected || !isClosed;
-                      })
-                      .sort((a, b) => {
-                        const dateA = a.date ? new Date(a.date).getTime() : Infinity;
-                        const dateB = b.date ? new Date(b.date).getTime() : Infinity;
-                        return dateA - dateB;
-                      })
-                      .map((event) => {
-                        // Check local pending state
-                        const isSoloRegistered = pendingSoloEvents.includes(
-                          event.title,
-                        );
 
-                        // Check if registered as Team (server state)
-                        const teamReg = registrations.teamEvents.find(
-                          (t) => t.eventTitle === event.title,
-                        );
+                          const isSelected = isSoloRegistered || !!teamReg;
+                          const isLocked =
+                            !!teamReg && teamReg.leaderId !== user?.uid;
+                          const isClosed = eventSettings[event.title] || false;
 
-                        const isSelected = isSoloRegistered || !!teamReg;
-                        const isLocked =
-                          !!teamReg && teamReg.leaderId !== user?.uid;
-                        const isClosed = eventSettings[event.title] || false;
-
-                        // Calculate if registration should be disabled based on limits
-                        let isDisabled = false;
-                        if (!isSelected) {
-                          if (event.categoryType === 'off_stage' && counts.offStage >= 4) {
-                            isDisabled = true;
-                          } else if (event.categoryType === 'on_stage' || event.categoryType === 'flagship') {
-                            if (event.eventType === 'individual' && counts.onStageInd >= 3) {
+                          // Calculate if registration should be disabled based on limits
+                          let isDisabled = false;
+                          if (!isSelected) {
+                            if (
+                              event.categoryType === "off_stage" &&
+                              counts.offStage >= 4
+                            ) {
                               isDisabled = true;
-                            } else if (event.eventType === 'group' && counts.onStageGroup >= 2) {
-                              isDisabled = true;
+                            } else if (
+                              event.categoryType === "on_stage" ||
+                              event.categoryType === "flagship"
+                            ) {
+                              if (
+                                event.eventType === "individual" &&
+                                counts.onStageInd >= 3
+                              ) {
+                                isDisabled = true;
+                              } else if (
+                                event.eventType === "group" &&
+                                counts.onStageGroup >= 2
+                              ) {
+                                isDisabled = true;
+                              }
                             }
                           }
-                        }
 
-                        return (
-                          <EventRegistrationCard
-                            key={event.title}
-                            event={event}
-                            isSelected={isSelected}
-                            isLocked={isLocked}
-                            isRegistrationClosed={isClosed}
-                            isDisabled={isDisabled}
-                            teamDetails={teamReg}
-                            onToggle={() => handleToggleSolo(event)} // Handles local state
-                            onCreateTeam={(members: any[]) =>
-                              handleCreateTeam(event, members)
-                            }
-                            onLeaveTeam={async () => {
-                              if (teamReg?.id)
-                                await handleLeaveTeam(teamReg.id);
-                            }}
-                            currentUser={userProfile || user}
-                          />
-                        );
-                      })}
+                          return (
+                            <EventRegistrationCard
+                              key={event.title}
+                              event={event}
+                              isSelected={isSelected}
+                              isLocked={isLocked}
+                              isRegistrationClosed={isClosed}
+                              isDisabled={isDisabled}
+                              teamDetails={teamReg}
+                              onToggle={() => handleToggleSolo(event)} // Handles local state
+                              onCreateTeam={(members: any[]) =>
+                                handleCreateTeam(event, members)
+                              }
+                              onLeaveTeam={async () => {
+                                if (teamReg?.id)
+                                  await handleLeaveTeam(teamReg.id);
+                              }}
+                              currentUser={userProfile || user}
+                            />
+                          );
+                        })}
                 </div>
               </section>
             ))}
