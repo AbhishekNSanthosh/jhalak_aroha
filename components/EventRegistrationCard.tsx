@@ -204,6 +204,12 @@ export default function EventRegistrationCard({
               )}{" "}
               {event.eventType}
             </span>
+            {isGroup && (event.minParticipants || event.maxParticipants) && (
+              <span className="flex items-center gap-1.5 px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-[10px] font-black text-purple-400 uppercase tracking-widest">
+                <Users size={11} /> {event.minParticipants}-
+                {event.maxParticipants} Members
+              </span>
+            )}
             {isRegistrationClosed && !isSelected && (
               <span className="flex items-center gap-1.5 px-3 py-1 bg-red-950/30 border border-red-500/30 rounded-lg text-[10px] font-black text-red-500 uppercase tracking-widest animate-pulse">
                 <X size={11} /> Closed
