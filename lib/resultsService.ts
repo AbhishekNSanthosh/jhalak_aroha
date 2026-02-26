@@ -24,9 +24,10 @@ function stripUndefined<T extends object>(obj: T): T {
 export interface EventResult {
     eventTitle: string;
     eventType: "individual" | "group"; // determines point multiplier
-    first?: ResultEntry;
-    second?: ResultEntry;
-    third?: ResultEntry;
+    /** Supports 1 or more tied winners per place */
+    first?: ResultEntry[];
+    second?: ResultEntry[];
+    third?: ResultEntry[];
     updatedAt?: any;
 }
 
@@ -66,6 +67,21 @@ export const NEGATIVE_OFFENSES = [
 
 export const HOUSES = ["Red House", "Blue House", "Green House", "Yellow House"];
 
+// ─── Backward-compat normaliser ───────────────────────────────────────────────
+
+/**
+ * Old documents stored `first`, `second`, `third` as a single ResultEntry object.
+ * New documents store them as ResultEntry[].
+ * This function normalises either shape to always return ResultEntry[].
+ */
+export function toEntryArray(val: any): ResultEntry[] | undefined {
+    if (!val) return undefined;
+    if (Array.isArray(val)) return val.length > 0 ? val : undefined;
+    // Legacy single-object shape
+    if (typeof val === "object" && val.name) return [val as ResultEntry];
+    return undefined;
+}
+
 // ─── CRUD: Event Results ───────────────────────────────────────────────────────
 
 /** Save (upsert) result for one event */
@@ -75,8 +91,6 @@ export const saveEventResult = async (
     if (!db) return { success: false, message: "DB not initialized" };
     try {
         const ref = doc(db, "event_results", result.eventTitle);
-        // stripUndefined is essential — Firestore throws on undefined field values
-        // e.g. ResultEntry.teamName is optional and may be undefined for solo events
         const payload = stripUndefined({ ...result, updatedAt: serverTimestamp() });
         await setDoc(ref, payload, { merge: true });
         return { success: true };
@@ -106,20 +120,27 @@ export const fetchAllResults = async (): Promise<EventResult[]> => {
             }
         });
 
-        const enrich = (entry: ResultEntry | undefined): ResultEntry | undefined => {
-            if (!entry) return undefined;
+        const enrichEntry = (entry: ResultEntry): ResultEntry => {
             const extra = chestMap.get(entry.chestNo);
             return extra ? { ...entry, ...extra } : entry;
         };
 
+        const enrichArray = (val: any): ResultEntry[] | undefined => {
+            const arr = toEntryArray(val);
+            if (!arr) return undefined;
+            return arr.map(enrichEntry);
+        };
+
         return resultsSnap.docs.map((d) => {
-            const r = d.data() as EventResult;
+            const r = d.data();
             return {
-                ...r,
-                first: enrich(r.first),
-                second: enrich(r.second),
-                third: enrich(r.third),
-            };
+                eventTitle: r.eventTitle,
+                eventType: r.eventType,
+                updatedAt: r.updatedAt,
+                first: enrichArray(r.first),
+                second: enrichArray(r.second),
+                third: enrichArray(r.third),
+            } as EventResult;
         });
     } catch {
         return [];
@@ -133,7 +154,16 @@ export const fetchEventResult = async (
     if (!db) return null;
     try {
         const snap = await getDoc(doc(db, "event_results", eventTitle));
-        return snap.exists() ? (snap.data() as EventResult) : null;
+        if (!snap.exists()) return null;
+        const r = snap.data();
+        return {
+            eventTitle: r.eventTitle,
+            eventType: r.eventType,
+            updatedAt: r.updatedAt,
+            first: toEntryArray(r.first),
+            second: toEntryArray(r.second),
+            third: toEntryArray(r.third),
+        } as EventResult;
     } catch {
         return null;
     }
@@ -229,17 +259,24 @@ export const computeHouseScores = (
     for (const r of results) {
         const pts = POINTS[r.eventType] ?? POINTS.individual;
 
-        const add = (entry: ResultEntry | undefined, pts: number, place: keyof Pick<HouseScore, 'firstPlaces' | 'secondPlaces' | 'thirdPlaces'>) => {
-            if (!entry?.house) return;
-            const h = normaliseHouse(entry.house);
-            if (!map[h]) return;
-            map[h].positive += pts;
-            map[h][place]++;
+        const addEntries = (
+            entries: ResultEntry[] | undefined,
+            ptsVal: number,
+            placeKey: keyof Pick<HouseScore, "firstPlaces" | "secondPlaces" | "thirdPlaces">
+        ) => {
+            if (!entries?.length) return;
+            for (const entry of entries) {
+                if (!entry?.house) continue;
+                const h = normaliseHouse(entry.house);
+                if (!map[h]) continue;
+                map[h].positive += ptsVal;
+                map[h][placeKey]++;
+            }
         };
 
-        add(r.first, pts.first, "firstPlaces");
-        add(r.second, pts.second, "secondPlaces");
-        add(r.third, pts.third, "thirdPlaces");
+        addEntries(r.first, pts.first, "firstPlaces");
+        addEntries(r.second, pts.second, "secondPlaces");
+        addEntries(r.third, pts.third, "thirdPlaces");
     }
 
     // Negative markings
@@ -315,9 +352,9 @@ export const computeIndividualScores = (results: EventResult[]): IndividualScore
 
     for (const r of results) {
         const pts = POINTS[r.eventType] ?? POINTS.individual;
-        upsert(r.first, "first", pts.first, r.eventTitle);
-        upsert(r.second, "second", pts.second, r.eventTitle);
-        upsert(r.third, "third", pts.third, r.eventTitle);
+        r.first?.forEach((e) => upsert(e, "first", pts.first, r.eventTitle));
+        r.second?.forEach((e) => upsert(e, "second", pts.second, r.eventTitle));
+        r.third?.forEach((e) => upsert(e, "third", pts.third, r.eventTitle));
     }
 
     return Array.from(map.values()).sort((a, b) => b.totalPoints - a.totalPoints);
@@ -361,27 +398,30 @@ export const computeHouseDetails = (
     for (const r of results) {
         const pts = POINTS[r.eventType] ?? POINTS.individual;
 
-        const record = (
-            entry: ResultEntry | undefined,
+        const recordEntries = (
+            entries: ResultEntry[] | undefined,
             place: "first" | "second" | "third",
             ptsVal: number
         ) => {
-            if (!entry?.house) return;
-            const h = normaliseHouse(entry.house);
-            if (!map[h]) return;
-            map[h].wins.push({
-                eventTitle: r.eventTitle,
-                eventType: r.eventType,
-                place,
-                pts: ptsVal,
-                winner: entry,
-            });
-            map[h].positiveTotal += ptsVal;
+            if (!entries?.length) return;
+            for (const entry of entries) {
+                if (!entry?.house) continue;
+                const h = normaliseHouse(entry.house);
+                if (!map[h]) continue;
+                map[h].wins.push({
+                    eventTitle: r.eventTitle,
+                    eventType: r.eventType,
+                    place,
+                    pts: ptsVal,
+                    winner: entry,
+                });
+                map[h].positiveTotal += ptsVal;
+            }
         };
 
-        record(r.first, "first", pts.first);
-        record(r.second, "second", pts.second);
-        record(r.third, "third", pts.third);
+        recordEntries(r.first, "first", pts.first);
+        recordEntries(r.second, "second", pts.second);
+        recordEntries(r.third, "third", pts.third);
     }
 
     for (const m of markings) {

@@ -20,6 +20,7 @@ import {
   IndividualScore,
   HouseDetail,
   NegativeMarking,
+  ResultEntry,
   fetchAllResults,
   fetchNegativeMarkings,
   computeHouseScores,
@@ -500,48 +501,61 @@ export default function Results({
                           </p>
                           <div className="space-y-2">
                             {PLACE_KEYS.map((place, pi) => {
-                              const entry = r[place];
-                              if (!entry) return null;
+                              const entries = r[place];
+                              if (!entries?.length) return null;
                               const { Icon, color } = PLACE_ICONS[pi];
-                              const meta = HOUSE_META[entry.house ?? ""];
                               return (
-                                <div
-                                  key={place}
-                                  className="flex items-center gap-2 text-xs"
-                                >
-                                  <Icon
-                                    size={13}
-                                    className={`${color} flex-shrink-0`}
-                                  />
-                                  <span className="text-white font-semibold truncate flex-1 capitalize">
-                                    {entry.name.toLowerCase()}
-                                    {entry.teamName && (
-                                      <span className="text-gray-500 font-normal ml-1 lowercase">
-                                        ({entry.teamName.toLowerCase()})
-                                      </span>
-                                    )}
-                                  </span>
-                                  {(entry.department || entry.semester) && (
-                                    <span className="flex-shrink-0 px-1.5 py-0.5 rounded-full border border-white/10 bg-white/5 text-[10px] font-bold text-sky-400">
-                                      {entry.semester
-                                        ? `${entry.semester} `
-                                        : ""}
-                                      {entry.department === "CIVIL"
-                                        ? "Civil"
-                                        : entry.department === "MECH"
-                                          ? "Mech"
-                                          : entry.department}
-                                    </span>
-                                  )}
-                                  {entry.house && (
-                                    <span
-                                      className={`flex-shrink-0 px-2 py-0.5 rounded-full border text-[10px] font-bold ${
-                                        meta?.badge ??
-                                        "border-white/10 bg-white/5 text-gray-400"
-                                      }`}
-                                    >
-                                      {entry.house.replace(" House", "")}
-                                    </span>
+                                <div key={place} className="space-y-1">
+                                  {entries.map(
+                                    (entry: ResultEntry, ei: number) => {
+                                      const meta =
+                                        HOUSE_META[entry.house ?? ""];
+                                      return (
+                                        <div
+                                          key={`${place}-${ei}`}
+                                          className="flex items-center gap-2 text-xs"
+                                        >
+                                          <Icon
+                                            size={13}
+                                            className={`${color} flex-shrink-0`}
+                                          />
+                                          <span className="text-white font-semibold truncate flex-1 capitalize">
+                                            {entry.name.toLowerCase()}
+                                            {entry.teamName && (
+                                              <span className="text-gray-500 font-normal ml-1 lowercase">
+                                                ({entry.teamName.toLowerCase()})
+                                              </span>
+                                            )}
+                                          </span>
+                                          {(entry.department ||
+                                            entry.semester) && (
+                                            <span className="flex-shrink-0 px-1.5 py-0.5 rounded-full border border-white/10 bg-white/5 text-[10px] font-bold text-sky-400">
+                                              {entry.semester
+                                                ? `${entry.semester} `
+                                                : ""}
+                                              {entry.department === "CIVIL"
+                                                ? "Civil"
+                                                : entry.department === "MECH"
+                                                  ? "Mech"
+                                                  : entry.department}
+                                            </span>
+                                          )}
+                                          {entry.house && (
+                                            <span
+                                              className={`flex-shrink-0 px-2 py-0.5 rounded-full border text-[10px] font-bold ${
+                                                meta?.badge ??
+                                                "border-white/10 bg-white/5 text-gray-400"
+                                              }`}
+                                            >
+                                              {entry.house.replace(
+                                                " House",
+                                                "",
+                                              )}
+                                            </span>
+                                          )}
+                                        </div>
+                                      );
+                                    },
                                   )}
                                 </div>
                               );

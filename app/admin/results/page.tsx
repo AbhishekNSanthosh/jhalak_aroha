@@ -34,6 +34,7 @@ import {
   X,
   Search,
   Crown,
+  Users,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -115,7 +116,7 @@ export default function ResultsPage() {
   const [editResult, setEditResult] = useState<EventResult | null>(null);
   const [savingResult, setSavingResult] = useState(false);
 
-  // Participant search for each place
+  // Participant search for each place (single input for adding new)
   const [participantSearch, setParticipantSearch] = useState<
     Record<string, string>
   >({
@@ -179,12 +180,30 @@ export default function ResultsPage() {
     setLoadingParticipants(false);
   };
 
-  // ── Set a place winner ─────────────────────────────────────────────────────
-  const setWinner = (
+  // ── Add a winner to a place (supports ties) ────────────────────────────────
+  const addWinner = (
     place: "first" | "second" | "third",
-    entry: ResultEntry | undefined,
+    entry: ResultEntry,
   ) => {
-    setEditResult((prev) => (prev ? { ...prev, [place]: entry } : prev));
+    setEditResult((prev) => {
+      if (!prev) return prev;
+      const current = prev[place] ?? [];
+      // Avoid duplicate by chestNo
+      if (current.some((e) => e.chestNo === entry.chestNo)) return prev;
+      return { ...prev, [place]: [...current, entry] };
+    });
+  };
+
+  // ── Remove a specific winner from a place ──────────────────────────────────
+  const removeWinner = (
+    place: "first" | "second" | "third",
+    chestNo: string,
+  ) => {
+    setEditResult((prev) => {
+      if (!prev) return prev;
+      const updated = (prev[place] ?? []).filter((e) => e.chestNo !== chestNo);
+      return { ...prev, [place]: updated.length > 0 ? updated : undefined };
+    });
   };
 
   // ── Save result ────────────────────────────────────────────────────────────
@@ -264,12 +283,15 @@ export default function ResultsPage() {
   const getFilteredParticipants = (place: "first" | "second" | "third") => {
     const term = (participantSearch[place] || "").toLowerCase();
     if (!term) return [];
+    // Already-selected chest nos for this place
+    const selected = new Set((editResult?.[place] ?? []).map((e) => e.chestNo));
     return participants
       .filter(
         (p) =>
-          p.name.toLowerCase().includes(term) ||
-          p.chestNo.toLowerCase().includes(term) ||
-          (p.teamName && p.teamName.toLowerCase().includes(term)),
+          !selected.has(p.chestNo) &&
+          (p.name.toLowerCase().includes(term) ||
+            p.chestNo.toLowerCase().includes(term) ||
+            (p.teamName && p.teamName.toLowerCase().includes(term))),
       )
       .slice(0, 6);
   };
@@ -297,7 +319,7 @@ export default function ResultsPage() {
         </h1>
         <p className="text-gray-400 text-sm">
           Enter event results, add negative markings, and track the house
-          leaderboard.
+          leaderboard. Multiple winners per place are supported for ties.
         </p>
       </div>
 
@@ -469,6 +491,9 @@ export default function ResultsPage() {
                       <span className="text-amber-700 font-bold">
                         {eventPoints.third}
                       </span>
+                      <span className="ml-3 text-gray-600">
+                        · Each tied winner receives full points
+                      </span>
                     </p>
                   </div>
                   {loadingParticipants && (
@@ -481,144 +506,156 @@ export default function ResultsPage() {
 
                 {PLACE_LABELS.map(
                   ({ key, label, icon: Icon, color, border, bg }) => {
-                    const current = editResult[key];
+                    const currentWinners = editResult[key] ?? [];
                     const filtered = getFilteredParticipants(key);
 
                     return (
-                      // overflow-visible is CRITICAL — lets the absolute dropdown escape the card boundary
                       <div
                         key={key}
                         className={`rounded-xl border p-4 space-y-3 overflow-visible ${border} ${bg}`}
                       >
+                        {/* Place header */}
                         <div className="flex items-center gap-2">
                           <Icon size={16} className={color} />
                           <span className={`text-sm font-bold ${color}`}>
                             {label}
                           </span>
+                          {currentWinners.length > 1 && (
+                            <span className="ml-1 inline-flex items-center gap-1 text-[10px] bg-white/10 border border-white/10 rounded-full px-2 py-0.5 text-gray-400">
+                              <Users size={9} />
+                              Tied ({currentWinners.length})
+                            </span>
+                          )}
                           <span
                             className={`ml-auto text-xs font-bold font-mono ${color}`}
                           >
-                            +{eventPoints[key]}pts
+                            +{eventPoints[key]}pts each
                           </span>
                         </div>
 
-                        {/* Current winner display */}
-                        {current ? (
-                          <div className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2">
-                            <div>
-                              <p className="text-sm font-bold text-white">
-                                {current.name}
-                              </p>
-                              <p className="text-xs text-gray-400">
-                                Chest: {current.chestNo}
-                                {current.teamName &&
-                                  ` · Team: ${current.teamName}`}
-                                {current.house && (
-                                  <span className="ml-2 text-gray-300">
-                                    · {current.house}
-                                  </span>
-                                )}
-                              </p>
-                            </div>
-                            <button
-                              onClick={() => {
-                                setWinner(key, undefined);
-                                setParticipantSearch((p) => ({
-                                  ...p,
-                                  [key]: "",
-                                }));
-                              }}
-                              className="text-gray-500 hover:text-red-400 transition-colors p-1"
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="relative">
-                            <Search
-                              size={13}
-                              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 z-10"
-                            />
-                            <input
-                              type="text"
-                              placeholder="Search by name or chest no…"
-                              value={participantSearch[key]}
-                              onChange={(e) =>
-                                setParticipantSearch((p) => ({
-                                  ...p,
-                                  [key]: e.target.value,
-                                }))
-                              }
-                              className="w-full bg-black/40 border border-white/10 rounded-lg pl-8 pr-3 py-2 text-sm text-white outline-none placeholder:text-gray-600 focus:border-white/30 transition-colors"
-                            />
-                            {/* z-[200] guarantees the dropdown is always on top of all sibling cards */}
-                            {filtered.length > 0 && (
-                              <div className="absolute top-full mt-1 left-0 right-0 z-[200] bg-neutral-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden">
-                                {filtered.map((p) => (
-                                  <button
-                                    key={p.id}
-                                    // onMouseDown + preventDefault stops the input blur
-                                    // from firing before onClick, which would close the
-                                    // dropdown before the selection is registered.
-                                    onMouseDown={(e) => e.preventDefault()}
-                                    onClick={() => {
-                                      setWinner(key, {
-                                        chestNo: p.chestNo,
-                                        name: p.name,
-                                        house: p.house || "",
-                                        teamName: p.teamName,
-                                      });
-                                      setParticipantSearch((prev) => ({
-                                        ...prev,
-                                        [key]: "",
-                                      }));
-                                    }}
-                                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors border-b border-white/5 last:border-none"
-                                  >
-                                    <span className="text-white font-bold">
-                                      {p.name}
-                                    </span>
-                                    <span className="text-xs text-gray-500 ml-2">
-                                      #{p.chestNo}
-                                      {p.teamName && ` · ${p.teamName}`}
-                                      {p.house && ` · ${p.house}`}
-                                    </span>
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                            {/* Manual entry fallback when no participants match */}
-                            {participantSearch[key].trim() &&
-                              filtered.length === 0 &&
-                              !loadingParticipants && (
-                                <div className="absolute top-full mt-1 left-0 right-0 z-[200] bg-neutral-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden">
-                                  <div className="px-4 py-2 text-xs text-gray-500 border-b border-white/5">
-                                    No registered participant found. Enter
-                                    manually:
-                                  </div>
-                                  <button
-                                    onMouseDown={(e) => e.preventDefault()}
-                                    onClick={() => {
-                                      const val = participantSearch[key].trim();
-                                      setWinner(key, {
-                                        chestNo: val,
-                                        name: val,
-                                        house: "",
-                                      });
-                                      setParticipantSearch((prev) => ({
-                                        ...prev,
-                                        [key]: "",
-                                      }));
-                                    }}
-                                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors text-gray-300"
-                                  >
-                                    Use &ldquo;{participantSearch[key].trim()}
-                                    &rdquo; as name/chest no
-                                  </button>
+                        {/* Current winners list */}
+                        {currentWinners.length > 0 && (
+                          <div className="space-y-1.5">
+                            {currentWinners.map((winner, wi) => (
+                              <div
+                                key={`${winner.chestNo}-${wi}`}
+                                className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2"
+                              >
+                                <div>
+                                  <p className="text-sm font-bold text-white">
+                                    {winner.name}
+                                  </p>
+                                  <p className="text-xs text-gray-400">
+                                    Chest: {winner.chestNo}
+                                    {winner.teamName &&
+                                      ` · Team: ${winner.teamName}`}
+                                    {winner.house && (
+                                      <span className="ml-2 text-gray-300">
+                                        · {winner.house}
+                                      </span>
+                                    )}
+                                  </p>
                                 </div>
-                              )}
+                                <button
+                                  onClick={() =>
+                                    removeWinner(key, winner.chestNo)
+                                  }
+                                  className="text-gray-500 hover:text-red-400 transition-colors p-1"
+                                  title="Remove this winner"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            ))}
                           </div>
                         )}
+
+                        {/* Add another winner search */}
+                        <div className="relative">
+                          <Search
+                            size={13}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 z-10"
+                          />
+                          <input
+                            type="text"
+                            placeholder={
+                              currentWinners.length === 0
+                                ? "Search by name or chest no…"
+                                : "Add another winner (shared place)…"
+                            }
+                            value={participantSearch[key]}
+                            onChange={(e) =>
+                              setParticipantSearch((p) => ({
+                                ...p,
+                                [key]: e.target.value,
+                              }))
+                            }
+                            className="w-full bg-black/40 border border-white/10 rounded-lg pl-8 pr-3 py-2 text-sm text-white outline-none placeholder:text-gray-600 focus:border-white/30 transition-colors"
+                          />
+                          {/* z-[200] guarantees the dropdown is always on top of all sibling cards */}
+                          {filtered.length > 0 && (
+                            <div className="absolute top-full mt-1 left-0 right-0 z-[200] bg-neutral-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+                              {filtered.map((p) => (
+                                <button
+                                  key={p.id}
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => {
+                                    addWinner(key, {
+                                      chestNo: p.chestNo,
+                                      name: p.name,
+                                      house: p.house || "",
+                                      teamName: p.teamName,
+                                    });
+                                    setParticipantSearch((prev) => ({
+                                      ...prev,
+                                      [key]: "",
+                                    }));
+                                  }}
+                                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors border-b border-white/5 last:border-none"
+                                >
+                                  <span className="text-white font-bold">
+                                    {p.name}
+                                  </span>
+                                  <span className="text-xs text-gray-500 ml-2">
+                                    #{p.chestNo}
+                                    {p.teamName && ` · ${p.teamName}`}
+                                    {p.house && ` · ${p.house}`}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {/* Manual entry fallback when no participants match */}
+                          {participantSearch[key].trim() &&
+                            filtered.length === 0 &&
+                            !loadingParticipants && (
+                              <div className="absolute top-full mt-1 left-0 right-0 z-[200] bg-neutral-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+                                <div className="px-4 py-2 text-xs text-gray-500 border-b border-white/5">
+                                  No registered participant found. Enter
+                                  manually:
+                                </div>
+                                <button
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => {
+                                    const val = participantSearch[key].trim();
+                                    addWinner(key, {
+                                      chestNo: val,
+                                      name: val,
+                                      house: "",
+                                    });
+                                    setParticipantSearch((prev) => ({
+                                      ...prev,
+                                      [key]: "",
+                                    }));
+                                  }}
+                                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors text-gray-300"
+                                >
+                                  Use &ldquo;{participantSearch[key].trim()}
+                                  &rdquo; as name/chest no
+                                </button>
+                              </div>
+                            )}
+                        </div>
                       </div>
                     );
                   },
@@ -690,30 +727,45 @@ export default function ResultsPage() {
                       </button>
                     </div>
                     <div className="mt-2 space-y-0.5">
-                      {r.first && (
-                        <p className="text-xs text-yellow-400">
-                          🥇 {r.first.name}{" "}
-                          <span className="text-gray-500">
-                            ({r.first.house})
-                          </span>
-                        </p>
-                      )}
-                      {r.second && (
-                        <p className="text-xs text-gray-300">
-                          🥈 {r.second.name}{" "}
-                          <span className="text-gray-500">
-                            ({r.second.house})
-                          </span>
-                        </p>
-                      )}
-                      {r.third && (
-                        <p className="text-xs text-amber-700">
-                          🥉 {r.third.name}{" "}
-                          <span className="text-gray-500">
-                            ({r.third.house})
-                          </span>
-                        </p>
-                      )}
+                      {(r.first ?? [])
+                        .map((w, i) => (
+                          <p key={i} className="text-xs text-yellow-400">
+                            🥇 {w.name}{" "}
+                            <span className="text-gray-500">({w.house})</span>
+                            {(r.first?.length ?? 0) > 1 && i === 0 && (
+                              <span className="ml-1 text-gray-600 text-[10px]">
+                                +{(r.first?.length ?? 1) - 1} more
+                              </span>
+                            )}
+                          </p>
+                        ))
+                        .slice(0, 1)}
+                      {(r.second ?? [])
+                        .map((w, i) => (
+                          <p key={i} className="text-xs text-gray-300">
+                            🥈 {w.name}{" "}
+                            <span className="text-gray-500">({w.house})</span>
+                            {(r.second?.length ?? 0) > 1 && i === 0 && (
+                              <span className="ml-1 text-gray-600 text-[10px]">
+                                +{(r.second?.length ?? 1) - 1} more
+                              </span>
+                            )}
+                          </p>
+                        ))
+                        .slice(0, 1)}
+                      {(r.third ?? [])
+                        .map((w, i) => (
+                          <p key={i} className="text-xs text-amber-700">
+                            🥉 {w.name}{" "}
+                            <span className="text-gray-500">({w.house})</span>
+                            {(r.third?.length ?? 0) > 1 && i === 0 && (
+                              <span className="ml-1 text-gray-600 text-[10px]">
+                                +{(r.third?.length ?? 1) - 1} more
+                              </span>
+                            )}
+                          </p>
+                        ))
+                        .slice(0, 1)}
                     </div>
                   </div>
                 ))}
