@@ -11,6 +11,10 @@ import {
   RefreshCcw,
   Eye,
   Power,
+  Mic,
+  BookOpen,
+  Star,
+  LayoutGrid,
 } from "lucide-react";
 import ExportOptionsModal from "./ExportOptionsModal";
 import * as XLSX from "xlsx";
@@ -30,6 +34,9 @@ export default function EventStats({ user }: { user: User | null }) {
   const [typeFilter, setTypeFilter] = useState<"all" | "individual" | "group">(
     "all",
   );
+  const [categoryFilter, setCategoryFilter] = useState<
+    "all" | "on_stage" | "off_stage" | "flagship"
+  >("all");
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [selectedEventForExport, setSelectedEventForExport] =
@@ -203,7 +210,9 @@ export default function EventStats({ user }: { user: User | null }) {
       stat.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       stat.shortCode.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === "all" || stat.type === typeFilter;
-    return matchesSearch && matchesType;
+    const matchesCategory =
+      categoryFilter === "all" || stat.categoryType === categoryFilter;
+    return matchesSearch && matchesType && matchesCategory;
   });
 
   if (loading)
@@ -332,33 +341,123 @@ export default function EventStats({ user }: { user: User | null }) {
       </div>
 
       {/* Controls */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white/5 p-4 rounded-xl border border-white/10">
-        <div className="relative w-full md:w-96">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            size={18}
-          />
-          <input
-            type="text"
-            placeholder="Search events..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-black/50 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-white focus:border-[#BA170D] focus:outline-none transition-colors"
-          />
+      <div className="space-y-3">
+        {/* Category Filter Pills */}
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              {
+                key: "all",
+                label: "All Categories",
+                icon: LayoutGrid,
+                color:
+                  "text-gray-300 border-white/20 bg-white/5 hover:bg-white/10",
+                activeColor: "bg-white/15 text-white border-white/40",
+              },
+              {
+                key: "on_stage",
+                label: "On-Stage",
+                icon: Mic,
+                color:
+                  "text-purple-400 border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/15",
+                activeColor:
+                  "bg-purple-500/20 text-purple-300 border-purple-500/40",
+              },
+              {
+                key: "off_stage",
+                label: "Off-Stage",
+                icon: BookOpen,
+                color:
+                  "text-blue-400 border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/15",
+                activeColor: "bg-blue-500/20 text-blue-300 border-blue-500/40",
+              },
+              {
+                key: "flagship",
+                label: "Flagship / Online",
+                icon: Star,
+                color:
+                  "text-amber-400 border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/15",
+                activeColor:
+                  "bg-amber-500/20 text-amber-300 border-amber-500/40",
+              },
+            ] as const
+          ).map(({ key, label, icon: Icon, color, activeColor }) => {
+            const count =
+              key === "all"
+                ? stats.length
+                : stats.filter((s) => s.categoryType === key).length;
+            const isActive = categoryFilter === key;
+            return (
+              <button
+                key={key}
+                onClick={() => setCategoryFilter(key)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider border transition-all duration-200 ${
+                  isActive ? activeColor : color
+                }`}
+              >
+                <Icon size={12} />
+                {label}
+                <span
+                  className={`px-1.5 py-0.5 rounded-full text-[9px] font-black ${
+                    isActive
+                      ? "bg-white/20 text-white"
+                      : "bg-white/5 text-gray-500"
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        <div className="flex gap-3 w-full md:w-auto">
-          <select
-            value={typeFilter}
-            onChange={(e) =>
-              setTypeFilter(e.target.value as "all" | "individual" | "group")
-            }
-            className="bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-[#BA170D] focus:outline-none"
-          >
-            <option value="all">All Types</option>
-            <option value="individual">Individual</option>
-            <option value="group">Group</option>
-          </select>
+        {/* Search + Type filter row */}
+        <div className="flex flex-col md:flex-row gap-3 justify-between items-center bg-white/5 p-3 rounded-xl border border-white/10">
+          <div className="relative w-full md:w-96">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              size={18}
+            />
+            <input
+              type="text"
+              placeholder="Search events..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-black/50 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-white focus:border-[#BA170D] focus:outline-none transition-colors"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+              Type:
+            </span>
+            {(["all", "individual", "group"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTypeFilter(t)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all ${
+                  typeFilter === t
+                    ? t === "individual"
+                      ? "bg-blue-500/20 text-blue-300 border-blue-500/30"
+                      : t === "group"
+                        ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
+                        : "bg-white/15 text-white border-white/30"
+                    : "text-gray-500 border-white/10 hover:text-gray-300 hover:border-white/20"
+                }`}
+              >
+                {t === "individual" ? (
+                  <Users size={10} />
+                ) : t === "group" ? (
+                  <Layers size={10} />
+                ) : null}
+                {t === "all" ? "All" : t}
+              </button>
+            ))}
+            <span className="text-[10px] font-mono text-gray-600 ml-2">
+              {filteredStats.length} event
+              {filteredStats.length !== 1 ? "s" : ""}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -384,13 +483,30 @@ export default function EventStats({ user }: { user: User | null }) {
                 className="hover:bg-white/5 transition-colors group"
               >
                 <td className="p-4">
-                  <div>
+                  <div className="space-y-1">
                     <p className="font-bold text-white group-hover:text-[#BA170D] transition-colors">
                       {stat.title}
                     </p>
-                    <p className="text-gray-500 text-xs">
-                      {stat.shortCode} • {stat.category}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600 text-[10px] font-mono">
+                        {stat.shortCode}
+                      </span>
+                      <span
+                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wide ${
+                          stat.categoryType === "on_stage"
+                            ? "text-purple-400 border-purple-500/30 bg-purple-500/10"
+                            : stat.categoryType === "off_stage"
+                              ? "text-blue-400 border-blue-500/30 bg-blue-500/10"
+                              : "text-amber-400 border-amber-500/30 bg-amber-500/10"
+                        }`}
+                      >
+                        {stat.categoryType === "on_stage"
+                          ? "On-Stage"
+                          : stat.categoryType === "off_stage"
+                            ? "Off-Stage"
+                            : "Flagship"}
+                      </span>
+                    </div>
                   </div>
                 </td>
                 <td className="p-4">

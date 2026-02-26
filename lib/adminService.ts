@@ -81,11 +81,11 @@ export interface EventStat {
     shortCode: string;
     type: 'individual' | 'group';
     category: string;
-    totalRegistrations: number; // Count of registration docs (Teams count as 1 here usually, or should we count teams?)
-    // Let's count "Entries" (Teams or Individuals) and "Participants" (People)
+    categoryType: 'on_stage' | 'off_stage' | 'flagship';
+    totalRegistrations: number;
     entryCount: number;
     participantCount: number;
-    registrations: any[]; // Full data for export
+    registrations: any[];
     isRegistrationClosed: boolean;
 }
 
@@ -109,6 +109,7 @@ export const fetchEventStats = async (): Promise<EventStat[]> => {
                     shortCode: item.shortCode || "N/A",
                     type: item.eventType,
                     category: cat.title,
+                    categoryType: item.categoryType,
                     totalRegistrations: 0,
                     entryCount: 0,
                     participantCount: 0,
@@ -814,3 +815,190 @@ export const adminBulkMarkParticipation = async (
         return { success: false, message: error.message || "Failed to bulk update." };
     }
 };
+
+// 14. Admin Add Member to Existing Group Registration
+export const adminAddMemberToGroup = async (
+    eventTitle: string,
+    registrationId: string,
+    identifier: string, // email or chestNo
+): Promise<{ success: boolean; message?: string }> => {
+    if (!db) return { success: false, message: "Database not initialized" };
+    const firestore = db;
+
+    try {
+        // 1. Resolve user by email or chest no
+        let userDoc: any = null;
+        let uid = "";
+
+        const byEmail = await getDocs(query(collection(firestore, "users"), where("email", "==", identifier.trim())));
+        if (!byEmail.empty) {
+            userDoc = byEmail.docs[0];
+            uid = userDoc.id;
+        } else {
+            const byChest = await getDocs(query(collection(firestore, "users"), where("chestNo", "==", identifier.trim())));
+            if (!byChest.empty) {
+                userDoc = byChest.docs[0];
+                uid = userDoc.id;
+            }
+        }
+
+        if (!userDoc) return { success: false, message: "User not found. Check the email or chest number." };
+
+        const userData = userDoc.data();
+
+        // 2. Fetch current event registration
+        const regRef = doc(firestore, "event_registrations", registrationId);
+        const regSnap = await getDoc(regRef);
+        if (!regSnap.exists()) return { success: false, message: "Registration not found." };
+        const regData = regSnap.data();
+
+        // 3. House validation
+        const teamLeaderSnap = await getDoc(doc(firestore, "users", regData.leaderId));
+        const leaderHouse = teamLeaderSnap.exists() ? teamLeaderSnap.data().house : null;
+        if (leaderHouse && userData.house !== leaderHouse) {
+            return {
+                success: false,
+                message: `House mismatch: ${userData.name || "This user"} is in ${userData.house}, but the team belongs to ${leaderHouse}.`,
+            };
+        }
+
+        // 4. Check if already a member
+        const currentMemberIds: string[] = regData.memberIds || [];
+        if (currentMemberIds.includes(uid)) {
+            return { success: false, message: "This user is already a member of this group." };
+        }
+
+        // 5. Check max participants
+        const allItems = categories.flatMap((cat: any) => cat.items);
+        const eventItem = allItems.find((item: any) => item.title === eventTitle);
+        if (eventItem && eventItem.maxParticipants !== null) {
+            if (currentMemberIds.length >= eventItem.maxParticipants) {
+                return {
+                    success: false,
+                    message: `Cannot add: team already at max capacity (${eventItem.maxParticipants} members).`,
+                };
+            }
+        }
+
+        // 6. Check if user is already registered for this event in any capacity
+        const userRegRef = doc(firestore, "registrations", uid);
+        const userRegSnap = await getDoc(userRegRef);
+        if (userRegSnap.exists()) {
+            const userRegData = userRegSnap.data();
+            const evts: string[] = userRegData.events || [];
+            const tEvts: string[] = userRegData.teamEvents || [];
+            if (evts.includes(eventTitle) || tEvts.includes(eventTitle)) {
+                return { success: false, message: `${userData.name || "This user"} is already registered for ${eventTitle}.` };
+            }
+        }
+
+        // 7. Check registration limits for the new member
+        const existingEvents: string[] = userRegSnap.exists() ? (userRegSnap.data().events || []) : [];
+        const existingTeamEvents: string[] = userRegSnap.exists() ? (userRegSnap.data().teamEvents || []) : [];
+        let offStageCount = 0, onStageIndCount = 0, onStageGroupCount = 0;
+        const processEv = (title: string) => {
+            const ev = allItems.find((item: any) => item.title === title);
+            if (!ev) return;
+            if (ev.categoryType === 'off_stage') offStageCount++;
+            else if (ev.categoryType === 'on_stage' || ev.categoryType === 'flagship') {
+                if (ev.eventType === 'individual') onStageIndCount++;
+                else onStageGroupCount++;
+            }
+        };
+        existingEvents.forEach(processEv);
+        existingTeamEvents.forEach(processEv);
+        processEv(eventTitle);
+        if (offStageCount > 4) return { success: false, message: `Limit: ${userData.name || "User"} already has 4 Off-Stage events.` };
+        if (onStageIndCount > 3) return { success: false, message: `Limit: ${userData.name || "User"} already has 3 Individual On-Stage events.` };
+        if (onStageGroupCount > 3) return { success: false, message: `Limit: ${userData.name || "User"} already has 3 Group events.` };
+
+        // 8. Assign chest number if missing
+        let memberChestNo: string = userData.chestNo || "";
+        if (!memberChestNo) {
+            const globalCounterRef = doc(firestore, "counters", "user_chest_numbers");
+            const globalCounterSnap = await getDoc(globalCounterRef);
+            let currentCount = globalCounterSnap.exists() ? (globalCounterSnap.data().count || 0) : 0;
+            let isUnique = false;
+            while (!isUnique) {
+                currentCount++;
+                const candidate = (100 + currentCount).toString().padStart(3, '0');
+                const lockSnap = await getDoc(doc(firestore, "taken_chest_numbers", candidate));
+                if (!lockSnap.exists()) { memberChestNo = candidate; isUnique = true; }
+            }
+            const chestBatch = writeBatch(firestore);
+            chestBatch.set(globalCounterRef, { count: currentCount }, { merge: true });
+            chestBatch.set(doc(firestore, "users", uid), { chestNo: memberChestNo }, { merge: true });
+            chestBatch.set(doc(firestore, "taken_chest_numbers", memberChestNo), { uid, createdAt: serverTimestamp() });
+            await chestBatch.commit();
+        }
+
+        // 9. Write into teamand registrations docs
+        const newMember = { uid, name: userData.name || "Unknown", email: userData.email || "-", role: "member", status: "confirmed" };
+        const updatedMemberChestNos = { ...(regData.memberChestNos || {}), [uid]: memberChestNo };
+
+        const mainBatch = writeBatch(firestore);
+        mainBatch.update(regRef, { memberIds: arrayUnion(uid), memberChestNos: updatedMemberChestNos });
+
+        if (regData.teamId) {
+            const teamRef = doc(firestore, "teams", regData.teamId);
+            const teamSnap = await getDoc(teamRef);
+            if (teamSnap.exists()) {
+                const updatedMembers = [...(teamSnap.data().members || []), newMember];
+                mainBatch.update(teamRef, { memberIds: arrayUnion(uid), members: updatedMembers });
+            }
+        }
+
+        mainBatch.set(userRegRef, { userId: uid, teamEvents: arrayUnion(eventTitle), lastUpdated: serverTimestamp() }, { merge: true });
+        await mainBatch.commit();
+
+        return { success: true, message: `${userData.name || "User"} added to the group. Chest No: ${memberChestNo}` };
+
+    } catch (error: any) {
+        console.error("Error adding member to group:", error);
+        return { success: false, message: error.message || "Failed to add member." };
+    }
+};
+
+// 15. Admin Remove Specific Member from Group (without disbanding)
+export const adminRemoveMemberFromGroup = async (
+    eventTitle: string,
+    registrationId: string,
+    memberUid: string,
+): Promise<{ success: boolean; message?: string }> => {
+    if (!db) return { success: false, message: "Database not initialized" };
+    const firestore = db;
+
+    try {
+        const regRef = doc(firestore, "event_registrations", registrationId);
+        const regSnap = await getDoc(regRef);
+        if (!regSnap.exists()) return { success: false, message: "Registration not found." };
+        const regData = regSnap.data();
+
+        if (regData.leaderId === memberUid) {
+            return { success: false, message: "Cannot remove the team leader here. Use 'Remove from Event' to disband the entire team." };
+        }
+
+        const batch = writeBatch(firestore);
+        batch.update(regRef, { memberIds: arrayRemove(memberUid) });
+
+        if (regData.teamId) {
+            const teamRef = doc(firestore, "teams", regData.teamId);
+            const teamSnap = await getDoc(teamRef);
+            if (teamSnap.exists()) {
+                const updatedMembers = (teamSnap.data().members || []).filter((m: any) => m.uid !== memberUid);
+                batch.update(teamRef, { memberIds: arrayRemove(memberUid), members: updatedMembers });
+            }
+        }
+
+        const memberRegRef = doc(firestore, "registrations", memberUid);
+        batch.update(memberRegRef, { teamEvents: arrayRemove(eventTitle) });
+
+        await batch.commit();
+        return { success: true, message: "Member removed from the group successfully." };
+
+    } catch (error: any) {
+        console.error("Error removing member from group:", error);
+        return { success: false, message: error.message || "Failed to remove member." };
+    }
+};
+

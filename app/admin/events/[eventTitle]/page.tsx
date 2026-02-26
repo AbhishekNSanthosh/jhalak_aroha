@@ -5,11 +5,14 @@ import { useParams, useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
+import { categories } from "@/data/constant";
 import {
   DetailedRegistration,
   fetchDetailedEventRegistrations,
   adminMarkParticipation,
   adminBulkMarkParticipation,
+  adminAddMemberToGroup,
+  adminRemoveMemberFromGroup,
 } from "@/lib/adminService";
 import {
   Search,
@@ -31,6 +34,9 @@ import {
   ListChecks,
   Filter,
   ScanLine,
+  UserPlus,
+  Edit3,
+  UserMinus,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
@@ -71,6 +77,13 @@ export default function EventDetailedView() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const canManageUsers = userRole === "admin" || userRole === "moderator";
 
+  // Derive max participants for current event (used in Edit Members modal)
+  const eventMaxParticipants: number | null = (() => {
+    const allItems = categories.flatMap((c) => c.items);
+    const ev = allItems.find((i) => i.title === eventTitle);
+    return ev?.maxParticipants ?? null;
+  })();
+
   // Export
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
@@ -78,6 +91,15 @@ export default function EventDetailedView() {
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState("");
   const [addingUser, setAddingUser] = useState(false);
+
+  // Edit Members Modal (for group events)
+  const [editMembersReg, setEditMembersReg] =
+    useState<DetailedRegistration | null>(null);
+  const [addMemberInput, setAddMemberInput] = useState("");
+  const [addingMember, setAddingMember] = useState(false);
+  const [removingMemberUid, setRemovingMemberUid] = useState<string | null>(
+    null,
+  );
 
   // Chest No Scanner
   const [scanInput, setScanInput] = useState("");
@@ -297,6 +319,68 @@ export default function EventDetailedView() {
               loadData();
             } else {
               toast.error(result.message || "Failed to remove");
+            }
+          }}
+        />
+      ),
+      { duration: Infinity },
+    );
+  };
+
+  // ── Edit Members (group events) ──────────────────────────────────────────
+  const handleAddMemberToGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editMembersReg || !addMemberInput.trim()) return;
+    setAddingMember(true);
+    const result = await adminAddMemberToGroup(
+      eventTitle,
+      editMembersReg.id,
+      addMemberInput.trim(),
+    );
+    if (result.success) {
+      toast.success(result.message || "Member added!");
+      setAddMemberInput("");
+      // Reload data and refresh the editMembersReg reference
+      const fresh = await import("@/lib/adminService").then((m) =>
+        m.fetchDetailedEventRegistrations(eventTitle),
+      );
+      setRegistrations(fresh);
+      const updated = fresh.find((r) => r.id === editMembersReg.id);
+      if (updated) setEditMembersReg(updated);
+    } else {
+      toast.error(result.message || "Failed to add member.");
+    }
+    setAddingMember(false);
+  };
+
+  const handleRemoveMemberFromGroup = (
+    reg: DetailedRegistration,
+    memberUid: string,
+    memberName: string,
+  ) => {
+    toast.custom(
+      (t) => (
+        <ConfirmToast
+          t={t}
+          message={`Remove ${memberName} from this group?`}
+          onConfirm={async () => {
+            setRemovingMemberUid(memberUid);
+            const result = await adminRemoveMemberFromGroup(
+              eventTitle,
+              reg.id,
+              memberUid,
+            );
+            setRemovingMemberUid(null);
+            if (result.success) {
+              toast.success(result.message || "Removed!");
+              const fresh = await import("@/lib/adminService").then((m) =>
+                m.fetchDetailedEventRegistrations(eventTitle),
+              );
+              setRegistrations(fresh);
+              const updated = fresh.find((r) => r.id === reg.id);
+              setEditMembersReg(updated ?? null);
+            } else {
+              toast.error(result.message || "Failed to remove.");
             }
           }}
         />
@@ -969,9 +1053,19 @@ export default function EventDetailedView() {
                 {/* Team Members */}
                 {reg.members && reg.members.length > 0 && (
                   <div className="border-t border-white/5 bg-white/[0.02] p-6">
-                    <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                      <Users size={12} /> Team Members ({reg.members.length})
-                    </h4>
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                        <Users size={12} /> Team Members ({reg.members.length})
+                      </h4>
+                      {canManageUsers && (
+                        <button
+                          onClick={() => setEditMembersReg(reg)}
+                          className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-all"
+                        >
+                          <Edit3 size={11} /> Edit Members
+                        </button>
+                      )}
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                       {reg.members.map((member, i) => (
                         <div
@@ -1034,6 +1128,20 @@ export default function EventDetailedView() {
                     </div>
                   </div>
                 )}
+
+                {/* Edit Members Button (when no members expanded yet but group event) */}
+                {reg.type === "team" &&
+                  (!reg.members || reg.members.length === 0) &&
+                  canManageUsers && (
+                    <div className="border-t border-white/5 px-6 py-3 flex justify-end">
+                      <button
+                        onClick={() => setEditMembersReg(reg)}
+                        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-all"
+                      >
+                        <Edit3 size={11} /> Edit Members
+                      </button>
+                    </div>
+                  )}
 
                 {/* Hover accent + participated line */}
                 <div
@@ -1111,6 +1219,178 @@ export default function EventDetailedView() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Members Modal (Group Events) ── */}
+      {editMembersReg && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-neutral-900 border border-white/10 rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="flex items-start justify-between p-6 border-b border-white/10">
+              <div>
+                <h3 className="text-xl font-bold text-white font-unbounded">
+                  Edit Group Members
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">
+                  <span className="text-yellow-400 font-bold">
+                    {editMembersReg.teamName || "Team"}
+                  </span>
+                  {" · "}
+                  <span className="font-mono">{editMembersReg.chestNo}</span>
+                  {" · Leader: "}
+                  <span className="text-white font-semibold">
+                    {editMembersReg.name}
+                  </span>
+                  {" ("}
+                  <span
+                    className={`font-bold ${getHouseColor(editMembersReg.house).split(" ")[0]}`}
+                  >
+                    {editMembersReg.house}
+                  </span>
+                  )
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setEditMembersReg(null);
+                  setAddMemberInput("");
+                }}
+                className="text-gray-400 hover:text-white transition-colors mt-1"
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            {/* Current Members List */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-3 flex items-center gap-2">
+                <Users size={12} />
+                Current Members
+                <span className="px-2 py-0.5 rounded-full bg-white/10 text-white">
+                  {(editMembersReg.members?.length ?? 0) + 1}
+                  {" / "}
+                  {eventMaxParticipants ?? "∞"}
+                </span>
+              </p>
+
+              {/* Leader row */}
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-yellow-500/5 border border-yellow-500/20">
+                <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-yellow-500/20 flex items-center justify-center">
+                  <Crown size={14} className="text-yellow-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-white truncate">
+                    {editMembersReg.name}
+                  </p>
+                  <p className="text-[10px] text-gray-500 truncate">
+                    {editMembersReg.email}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-xs font-mono font-bold text-yellow-400">
+                    {editMembersReg.leaderChestNo || editMembersReg.chestNo}
+                  </span>
+                  <span
+                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${getHouseColor(editMembersReg.house)}`}
+                  >
+                    {editMembersReg.house}
+                  </span>
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
+                    Leader
+                  </span>
+                </div>
+              </div>
+
+              {/* Member rows */}
+              {(editMembersReg.members ?? []).length === 0 && (
+                <p className="text-center text-gray-600 py-6 text-sm">
+                  No additional members yet.
+                </p>
+              )}
+              {(editMembersReg.members ?? []).map((member) => (
+                <div
+                  key={member.uid}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/5 hover:border-white/10 transition-colors group/row"
+                >
+                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                    <User size={14} className="text-gray-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-200 truncate">
+                      {member.name}
+                    </p>
+                    <p className="text-[10px] text-gray-500 truncate">
+                      {member.email}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-xs font-mono font-bold text-[#BA170D]">
+                      {member.chestNo}
+                    </span>
+                    {member.house && member.house !== "-" && (
+                      <span
+                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${getHouseColor(member.house)}`}
+                      >
+                        {member.house}
+                      </span>
+                    )}
+                    <button
+                      onClick={() =>
+                        handleRemoveMemberFromGroup(
+                          editMembersReg,
+                          member.uid,
+                          member.name,
+                        )
+                      }
+                      disabled={removingMemberUid === member.uid}
+                      className="ml-1 p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover/row:opacity-100 disabled:opacity-50"
+                      title="Remove member"
+                    >
+                      {removingMemberUid === member.uid ? (
+                        <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin block" />
+                      ) : (
+                        <UserMinus size={14} />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Add Member Form */}
+            <div className="p-6 border-t border-white/10 bg-black/30">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-3 flex items-center gap-2">
+                <UserPlus size={12} /> Add Member
+              </p>
+              <form onSubmit={handleAddMemberToGroup} className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Enter email or chest number..."
+                  value={addMemberInput}
+                  onChange={(e) => setAddMemberInput(e.target.value)}
+                  className="flex-1 bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder:text-gray-600 focus:border-blue-500 focus:outline-none transition-colors"
+                  autoComplete="off"
+                />
+                <button
+                  type="submit"
+                  disabled={addingMember || !addMemberInput.trim()}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {addingMember ? (
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <UserPlus size={15} />
+                  )}
+                  {addingMember ? "Adding..." : "Add"}
+                </button>
+              </form>
+              <p className="text-[10px] text-gray-600 mt-2">
+                ⚠️ Member must belong to the same house as the leader (
+                {editMembersReg.house}). Registration constraints also apply.
+              </p>
+            </div>
           </div>
         </div>
       )}
