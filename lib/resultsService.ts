@@ -351,6 +351,8 @@ export const computeIndividualScores = (results: EventResult[]): IndividualScore
     };
 
     for (const r of results) {
+        // Group events only contribute to house scores, not individual scores
+        if (r.eventType === "group") continue;
         const pts = POINTS[r.eventType] ?? POINTS.individual;
         r.first?.forEach((e) => upsert(e, "first", pts.first, r.eventTitle));
         r.second?.forEach((e) => upsert(e, "second", pts.second, r.eventTitle));
